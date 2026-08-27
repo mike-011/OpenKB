@@ -495,8 +495,13 @@ def _llm_call(
         if _api_base and "api_base" not in kwargs:
             kwargs.setdefault("api_base", _api_base)
 
-    # Retry configuration for transient errors (fixed: 2 retries, base 2)
-    kwargs.setdefault("retries", 2)
+    # Retry configuration for transient errors (fixed: 2 retries). Uses
+    # LiteLLM's recognized ``num_retries`` kwarg — NOT ``retries``, which
+    # LiteLLM does not treat as an internal control parameter. An
+    # unrecognized kwarg falls through as a provider request-body field,
+    # which strict-mode proxies reject with e.g. "retries: Extra inputs
+    # are not permitted" (#233).
+    kwargs.setdefault("num_retries", 2)
     logger.debug("LLM request [%s]:\n%s", step_name, _fmt_messages(messages))
     if kwargs:
         logger.debug("LLM kwargs [%s]: %s", step_name, kwargs)
@@ -573,8 +578,13 @@ async def _llm_call_async(
         if _api_base and "api_base" not in kwargs:
             kwargs.setdefault("api_base", _api_base)
 
-    # Retry configuration for transient errors (fixed: 2 retries, base 2)
-    kwargs.setdefault("retries", 2)
+    # Retry configuration for transient errors (fixed: 2 retries). Uses
+    # LiteLLM's recognized ``num_retries`` kwarg — NOT ``retries``, which
+    # LiteLLM does not treat as an internal control parameter. An
+    # unrecognized kwarg falls through as a provider request-body field,
+    # which strict-mode proxies reject with e.g. "retries: Extra inputs
+    # are not permitted" (#233).
+    kwargs.setdefault("num_retries", 2)
     logger.debug("LLM request [%s]:\n%s", step_name, _fmt_messages(messages))
     if kwargs:
         logger.debug("LLM kwargs [%s]: %s", step_name, kwargs)
