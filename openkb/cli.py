@@ -129,11 +129,16 @@ def _per_file_debug_log(kb_dir: Path, file_path: Path, *, enabled: bool):
     ``kb_dir/logs/<file_path.name>.log``, overwriting any log from a previous
     run of the same file. The console is untouched: ``_configure_console_logging``
     already caps its handler at WARNING, so this is purely additive. A no-op
-    (yields immediately) when ``enabled`` is falsy, so callers can use this
-    unconditionally without branching.
+    (yields ``None`` immediately) when ``enabled`` is falsy, so callers can use
+    this unconditionally without branching.
+
+    Yields the log file's path (or ``None`` when disabled) so the caller can
+    decide, once the outcome of the add is known and this context has already
+    closed the file handler, whether to keep or delete it — see
+    ``_add_single_file_locked``, which deletes it only on ``"added"``.
     """
     if not enabled:
-        yield
+        yield None
         return
 
     logs_dir = kb_dir / DEBUG_LOGS_DIRNAME
@@ -149,7 +154,7 @@ def _per_file_debug_log(kb_dir: Path, file_path: Path, *, enabled: bool):
     file_handler.setFormatter(logging.Formatter("%(asctime)s %(name)s %(levelname)s: %(message)s"))
     openkb_logger.addHandler(file_handler)
     try:
-        yield
+        yield log_path
     finally:
         openkb_logger.removeHandler(file_handler)
         file_handler.close()
@@ -621,20 +626,32 @@ def _add_single_file_locked(
     ``logs/<file_path.name>.log`` instead of the console — see
     ``_per_file_debug_log``. The actual conversion/index/compile pipeline is
     in ``_add_single_file_locked_impl``.
+
+    The log is deleted once the outcome is known, but ONLY on an exact
+    ``"added"`` match (and ``"skipped"`` since 323579a) — not e.g.
+    ``!= "failed"`` — so a future third outcome (say, a partial/degraded
+    success like our ``"added_partial"``) can be added later without silently
+    inheriting delete-on-success just because it isn't "failed".
     """
     config = resolve_effective_config(kb_dir)[0]
     debug_enabled = bool(config.get("debug")) or logging.getLogger("openkb").isEnabledFor(
         logging.DEBUG
     )
-    with _per_file_debug_log(kb_dir, file_path, enabled=debug_enabled):
-        return _add_single_file_locked_impl(
-            file_path, kb_dir, stage=stage, bundle=bundle, identity=identity
+    with _per_file_debug_log(
+        kb_dir, file_path, enabled=debug_enabled
+    ) as log_path:
+        outcome = _add_single_file_locked_impl(
+            file_path, kb_dir, config, stage=stage, bundle=bundle, identity=identity
         )
+    if log_path is not None and outcome in ("added", "skipped"):
+        log_path.unlink(missing_ok=True)
+    return outcome
 
 
 def _add_single_file_locked_impl(
     file_path: Path,
     kb_dir: Path,
+    config: dict,
     *,
     stage: bool = True,
     bundle=None,
