@@ -628,10 +628,14 @@ def _add_single_file_locked(
     in ``_add_single_file_locked_impl``.
 
     The log is deleted once the outcome is known, but ONLY on an exact
-    ``"added"`` match (and ``"skipped"`` since 323579a) — not e.g.
-    ``!= "failed"`` — so a future third outcome (say, a partial/degraded
-    success like our ``"added_partial"``) can be added later without silently
-    inheriting delete-on-success just because it isn't "failed".
+    ``"added"``/``"skipped"`` match — not e.g. ``!= "failed"`` — so a future
+    third outcome (say, a partial/degraded success) can be added later
+    without silently inheriting delete-on-success just because it isn't
+    "failed". Both deleted outcomes have nothing new left to debug: "added"
+    is a successful fresh compile, and "skipped" is a dedup hit that never
+    even ran the pipeline. Only "failed" keeps its log — the whole point of
+    turning debug logging on. Our ``"added_partial"`` also keeps its log
+    (not an exact match) — partial compiles deserve debugging.
     """
     config = resolve_effective_config(kb_dir)[0]
     debug_enabled = bool(config.get("debug")) or logging.getLogger("openkb").isEnabledFor(
