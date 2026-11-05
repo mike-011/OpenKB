@@ -466,10 +466,23 @@ def _run_compile_with_retry(coro_factory, label: str) -> bool:
     return False  # pragma: no cover - unreachable (loop always returns or raises)
 
 
-def add_single_file(file_path: Path, kb_dir: Path, *, stage: bool = True, bundle=None) -> AddStatus:
-    """Convert, index, and compile a single document under the KB mutation lock."""
+def add_single_file(
+    file_path: Path,
+    kb_dir: Path,
+    *,
+    stage: bool = True,
+    bundle=None,
+    identity: str | None = None,
+) -> AddStatus:
+    """Convert, index, and compile a single document under the KB mutation lock.
+
+    ``identity`` is a stable registry key for a remote object (for example
+    ``s3://bucket/key``). Local adds leave it unset and keep using the file path.
+    """
     with kb_ingest_lock(kb_dir / ".openkb"):
-        return _add_single_file_locked(file_path, kb_dir, stage=stage, bundle=bundle)
+        return _add_single_file_locked(
+            file_path, kb_dir, stage=stage, bundle=bundle, identity=identity
+        )
 
 
 def _delete_if_auto_cleanup_enabled(file_path: Path, status: AddStatus, config: dict) -> bool:
@@ -527,7 +540,12 @@ def _cleanup_empty_directories(start_dir: Path) -> int:
 
 
 def _add_single_file_locked(
-    file_path: Path, kb_dir: Path, *, stage: bool = True, bundle=None
+    file_path: Path,
+    kb_dir: Path,
+    *,
+    stage: bool = True,
+    bundle=None,
+    identity: str | None = None,
 ) -> AddStatus:
     """Convert, index, and compile a single document into the knowledge base.
 
@@ -563,7 +581,11 @@ def _add_single_file_locked(
     # 2. Convert document into staging when possible.
     click.echo(f"Adding: {file_path.name}")
     try:
-        result = convert_document(file_path, kb_dir, staging_dir=staging_dir)
+        # Omit the keyword when unset so local adds keep the historical call.
+        if identity is None:
+            result = convert_document(file_path, kb_dir, staging_dir=staging_dir)
+        else:
+            result = convert_document(file_path, kb_dir, staging_dir=staging_dir, identity=identity)
     except Exception as exc:
         click.echo(f"  [ERROR] Conversion failed: {exc}")
         logger.debug("Conversion traceback:", exc_info=True)
@@ -668,7 +690,7 @@ def _add_single_file_locked(
                 "name": file_path.name,
                 "doc_name": doc_name,
                 "type": doc_type,
-                "path": _registry_path(file_path, kb_dir),
+                "path": identity if identity else _registry_path(file_path, kb_dir),
             }
             if result.raw_path is not None:
                 meta["raw_path"] = _registry_path(result.raw_path, kb_dir)
@@ -3989,3 +4011,13 @@ async def run_lint_report(
         "lint_files_changed": lint_files_changed,
         "lint_ghosts_removed": lint_ghosts_removed,
     }
+
+
+def _register_source_command() -> None:
+    """Attach ``openkb source`` without importing it while this module loads."""
+    from openkb.source_cmd import source as source_command
+
+    cli.add_command(source_command)
+
+
+_register_source_command()
