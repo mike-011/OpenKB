@@ -5,7 +5,7 @@ LLMs (vectorless retrieval via PageIndex). This repo is developed **agent-first*
 humans steer, agents execute. Optimize changes for agent legibility.
 
 ## Read next
-- `docs/golden-principles.md` — mechanical rules to follow (enforced where possible).
+- `docs/golden-principles.md` — mechanical rules to follow (enforced where possible); includes the change discipline: ticket → tests → docs → commit → evidence.
 - `docs/internal/superpowers/{specs,plans}/` — design history & plans *(maintainer-local, not in git)*.
 - `README.md` — user-facing overview and commands.
 
