@@ -117,6 +117,7 @@ Based on live testing with tg-collector:
 | qwen3.5 (cloud) | 397B | ✅ stable | ✅ grounded answer, stable |
 | gemma4 | 12B | ✅ | ⚠️ unstable (grounded on some runs, "could not retrieve" on others) |
 | qwen2.5-coder | 14B | ✅ | ❌ model ignores nudges; sanitize returns clear message |
+| mimo-v2.6-flash (cloud) | — | — | ✅ grounded, stable (27/27 tool battery, 2026-11-23) |
 
 **Recommendation**: for `query` and `chat` tool-loop, use models with
 strong instruction-following capability (general-purpose, not code-focused).
