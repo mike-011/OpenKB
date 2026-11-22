@@ -186,6 +186,7 @@ produce a grounded answer. This requires **instruction-following** and
 | qwen3.5 (cloud) | 397B | ✅ | ✅ grounded | Stable across all runs |
 | gemma4 | 12B | ✅ | ⚠️ unstable | Grounded answer on some runs; "could not retrieve" on others |
 | qwen2.5-coder | 14B | ✅ | ❌ | Model ignores nudge retries; sanitize fallback returns clear message |
+| mimo-v2.6-flash (cloud) | — | — | ✅ grounded | 27/27 tool-call battery (EN/RU, Cyrillic args, streaming); grounded query loop via agents SDK (2026-11-23) |
 
 ### Recommendations
 
@@ -212,6 +213,21 @@ Tested with Ollama 0.32.5, LiteLLM 1.94.0, openai-agents 0.19.1:
 | qwen3.5:397b (cloud) | Full tool-loop | Grounded answer with time/equipment details |
 | qwen2.5-coder:14b | Full tool-loop | 3 nudge retries → sanitize fallback (clear message) |
 | Non-Ollama path | Full test suite | 1148 passed, 0 regressions |
+
+### 2026-11-23 — mimo-v2.6-flash (Ollama Cloud)
+
+Battery: 8 cells x 3 variants (default temp / temp 0.2 / streaming) against
+`https://ollama.com/api/chat` with the OpenKB tool set, incl. Russian prompts
+and Cyrillic tool arguments, plus a 2-turn tool-result follow-up.
+
+| Model | Test | Result |
+|---|---|---|
+| mimo-v2.6-flash | Tool-call battery | 27/27 — structured tool_calls (valid names, parseable args), plain text where no tool is needed |
+| mimo-v2.6-flash | Full query loop (agents SDK + adapter) | grounded RU answers with wiki links on live KB data |
+| gemma4:31b-cloud (control) | Tool-call battery, variant A | 9/9 |
+
+Note: mimo's `tool_calls` carry `id` and `function.index`, with `arguments`
+as an object; the LiteLLM/agents-SDK path normalizes both shapes.
 
 ## Limitations
 
