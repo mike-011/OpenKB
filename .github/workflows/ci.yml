@@ -13,9 +13,12 @@ permissions:
   contents: read
 
 # Cancel superseded runs on the same ref (rapid PR pushes) instead of
-# letting them pile up and post stale statuses.
+# letting them pile up and post stale statuses. The group includes the
+# event name (push/PR/dispatch never collide) and, on main, the run id:
+# runs on main always run to completion — each merge is its own CI
+# evidence (#28).
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name }}-${{ github.ref }}-${{ github.ref == 'refs/heads/main' && github.run_id || 'shared' }}
   cancel-in-progress: true
 
 jobs:
