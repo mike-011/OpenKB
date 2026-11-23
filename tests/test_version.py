@@ -42,6 +42,7 @@ class TestBuildStampResolution:
 class TestVersionPayload:
     def test_info_shape(self, monkeypatch):
         monkeypatch.setenv("OPENKB_BUILD_STAMP", "20261123-1745-000")
+        monkeypatch.setenv("OPENKB_BUILD_CHANNEL", "stable")
         info = ver.version_info()
         assert set(info) == {"version", "build", "channel", "train"}
         assert info["build"] == "20261123-1745-000"
@@ -51,8 +52,14 @@ class TestVersionPayload:
 
     def test_channel_dev_without_stamp(self, monkeypatch):
         monkeypatch.delenv("OPENKB_BUILD_STAMP", raising=False)
+        monkeypatch.delenv("OPENKB_BUILD_CHANNEL", raising=False)
         monkeypatch.setattr(ver, "_STAMP_FILE", Path("/nonexistent/_build_stamp"))
+        monkeypatch.setattr(ver, "_CHANNEL_FILE", Path("/nonexistent/_build_channel"))
         assert ver.channel() == "dev"
+
+    def test_channel_env_override(self, monkeypatch):
+        monkeypatch.setenv("OPENKB_BUILD_CHANNEL", "stable")
+        assert ver.channel() == "stable"
 
 
 class TestCounterFile:

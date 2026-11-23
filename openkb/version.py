@@ -25,6 +25,7 @@ STAMP_RE = re.compile(r"^\d{8}-\d{4}-\d{3}$")
 
 _ENV_VAR = "OPENKB_BUILD_STAMP"
 _STAMP_FILE = Path(__file__).with_name("_build_stamp")
+_CHANNEL_FILE = Path(__file__).with_name("_build_channel")
 
 
 def make_stamp(now: datetime, counter: int) -> str:
@@ -52,9 +53,17 @@ def is_release_stamp(stamp: str) -> bool:
 
 
 def channel() -> str:
-    """Release channel marker: ``stable`` for stamped builds, ``dev`` for
-    source checkouts (no stamp) — the dev/stable tag Mike asked for (#81)."""
-    return "stable" if is_release_stamp(build_stamp()) else "dev"
+    """Channel marker — ``dev`` by default (Mike: all our builds are dev
+    builds for now), ``stable`` only when a build explicitly stamps it via
+    ``OPENKB_BUILD_CHANNEL=stable`` or the baked ``_build_channel`` file."""
+    env = os.environ.get("OPENKB_BUILD_CHANNEL", "").strip()
+    if env:
+        return env
+    try:
+        baked = _CHANNEL_FILE.read_text().strip()
+    except OSError:
+        return "dev"
+    return baked or "dev"
 
 
 def release() -> str:

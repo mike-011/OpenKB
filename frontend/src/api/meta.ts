@@ -4,7 +4,7 @@ export interface Meta {
   version: string
   /** Build number stamp (YYYYMMDD-HHMM-NNN), "dev" for source checkouts (#81). */
   build: string
-  /** Channel marker: "stable" | "dev" (#81). */
+  /** Channel marker: "stable" | "dev" (default dev — all local builds are dev builds) (#81). */
   channel: string
 }
 

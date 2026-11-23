@@ -5,15 +5,18 @@ Run at image build time (see the Dockerfile/compose build). Responsibilities:
 
 1. compute the stamp (UTC date-time + per-day counter);
 2. persist the counter (``.build-counter``, local build-host state, gitignored);
-3. write ``openkb/_build_stamp`` next to the package (baked into the image);
+3. write ``openkb/_build_stamp`` + ``openkb/_build_channel`` next to the
+   package (baked into the image);
 4. print the stamp on stdout (``docker build`` ARG/ENV wiring).
 
 Usage:
-    python scripts/stamp_build.py [--counter-file PATH] [--out PATH] [--dry-run]
+    python scripts/stamp_build.py [--channel dev|stable] [--counter-file PATH]
+                                  [--out PATH] [--dry-run]
 
 Counter semantics: NNN = which build of the day on this build host, 000 =
 first. The counter file stores ``<date> <count>`` and resets when the date
-changes.
+changes. Channel defaults to ``dev`` (Mike: all our builds are dev builds);
+``stable`` is stamped only for explicit release builds.
 """
 
 from __future__ import annotations
@@ -43,6 +46,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--counter-file", type=Path, default=REPO_ROOT / ".build-counter")
     parser.add_argument("--out", type=Path, default=REPO_ROOT / "openkb" / "_build_stamp")
+    parser.add_argument("--channel", choices=("dev", "stable"), default="dev")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -53,7 +57,8 @@ def main() -> int:
 
     if not args.dry_run:
         args.out.write_text(stamp + "\n")
-    print(stamp)
+        args.out.with_name("_build_channel").write_text(args.channel + "\n")
+    print(f"{stamp} {args.channel}")
     return 0
 
 

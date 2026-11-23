@@ -461,8 +461,9 @@ Three fields, surfaced on every interface:
   from git tags; upstream mechanism, untouched).
 - **build** — the build number stamp `YYYYMMDD-HHMM-NNN` — UTC build date-time
   + per-day build counter on the build host (`000` = first build of the day).
-- **channel** — the `stable` | `dev` marker (`stable` = a stamped build,
-  `dev` = source checkout fallback).
+- **channel** — the `stable` | `dev` marker. `dev` by default (all local
+  builds are dev builds); a release build stamps `stable` explicitly
+  (`--channel stable` / `OPENKB_BUILD_CHANNEL`).
 - **train** — the composite display line: `v1.0.0 · 20261123-1745-000 · stable`.
 
 Surfaces:
