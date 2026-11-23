@@ -234,10 +234,12 @@ def test_feedback_confirms_when_webbrowser_open_succeeds():
 
 
 def test_openkb_version_helper_matches_package_version():
-    """`_openkb_version` in cli.py must delegate to `openkb.__version__`
-    so the chat REPL and the feedback issue body never disagree on the
-    fallback string."""
+    """`_openkb_version` in cli.py must delegate to `openkb.version.version_string`
+    so the chat REPL and the feedback issue body never disagree — the line
+    carries the package release AND the build stamp (#81)."""
     from openkb import __version__
     from openkb.cli import _openkb_version
+    from openkb.version import build_stamp, channel
 
-    assert _openkb_version() == __version__
+    line = _openkb_version()
+    assert line == f"v{__version__} · {build_stamp()} · {channel()}"
