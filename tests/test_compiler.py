@@ -2245,10 +2245,10 @@ class TestCompileConceptsPlan:
 
     @pytest.mark.asyncio
     async def test_retry_sweep_recovers_concept_that_failed_first_attempt(self, tmp_path):
-        """A concept whose first attempt raises (simulating a transient
-        provider error, e.g. a gateway timeout) is retried once more after the
-        rest of the batch has run. If the retry succeeds, the page is written
-        and _compile_concepts reports full success (True)."""
+        """A concept whose first attempt raises (an error that survives the
+        stream-level retries in _llm_call_async) is retried once more after
+        the rest of the batch has run. If the retry succeeds, the page is
+        written and _compile_concepts reports full success (True)."""
         wiki = self._setup_wiki(tmp_path)
         plan_response = json.dumps(
             {
@@ -2270,14 +2270,20 @@ class TestCompileConceptsPlan:
             call_count["n"] += 1
             if idx == 0:
                 # First attempt overall (alpha, since max_concurrency=1 keeps
-                # this deterministic) fails like a transient gateway timeout.
-                raise RuntimeError("simulated transient gateway timeout")
+                # this deterministic) fails hard enough to survive the
+                # stream-level retry budget and reach the sweep (non-retryable
+                # class short-circuits the inner retries — one call per attempt).
+                import litellm as _litellm
+
+                raise _litellm.ContextWindowExceededError(
+                    "simulated persistent provider failure", "test", "test"
+                )
             mock_resp = MagicMock()
             mock_resp.choices = [MagicMock()]
             mock_resp.choices[0].message.content = beta_response if idx == 1 else alpha_response
             mock_resp.usage = MagicMock(prompt_tokens=100, completion_tokens=50)
             mock_resp.usage.prompt_tokens_details = None
-            return mock_resp
+            return [mock_resp]  # stream-shaped (single final chunk)
 
         with patch("openkb.agent.compiler.litellm") as mock_litellm:
             mock_litellm.completion = MagicMock(side_effect=_mock_completion([plan_response]))
