@@ -53,8 +53,30 @@ def read_wiki_file(path: str, wiki_root: str) -> str:
     if not full_path.is_relative_to(root):
         return "Access denied: path escapes wiki root."
     if not full_path.exists():
+        # Try resolving as a .md file regardless of what extension was given
+        md_path = (root / (Path(path).with_suffix("").as_posix() + ".md")).resolve()
+        if md_path.is_relative_to(root) and md_path.exists():
+            full_path = md_path
+    if not full_path.exists():
         return f"File not found: {path}"
     return full_path.read_text(encoding="utf-8")
+
+
+def read_wiki_files(paths: list[str], wiki_root: str) -> str:
+    """Read multiple Markdown files from the wiki in a single call.
+
+    Args:
+        paths: List of file paths relative to *wiki_root*.
+        wiki_root: Absolute path to the wiki root directory.
+
+    Returns:
+        Each file's content separated by a ``=== path ===`` header line.
+    """
+    parts: list[str] = []
+    for path in paths:
+        content = read_wiki_file(path, wiki_root)
+        parts.append(f"=== {path} ===\n{content}")
+    return "\n\n".join(parts)
 
 
 def parse_pages(pages: str) -> list[int]:
