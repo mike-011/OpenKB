@@ -4,9 +4,9 @@
   "provider": "openai",
   "api_base": "http://192.168.0.203:8081",
   "ctx": 32768,
-  "harness_sha": "ca28d77",
-  "started_utc": "2026-11-23T13:51:33+00:00",
-  "finished_utc": "2026-11-23T13:59:39+00:00",
+  "harness_sha": "02a4eb0",
+  "started_utc": "2026-11-23T16:19:16+00:00",
+  "finished_utc": "2026-11-23T16:50:47+00:00",
   "groups": {
     "tools": {
       "scenarios": [
@@ -26,7 +26,7 @@
                   }
                 }
               ],
-              "latency_s": 1.8,
+              "latency_s": 15.44,
               "pass": true,
               "reason": ""
             }
@@ -50,11 +50,11 @@
                 {
                   "name": "search",
                   "args": {
-                    "query": "backup retention rotate old backups"
+                    "query": "backup policy"
                   }
                 }
               ],
-              "latency_s": 1.66,
+              "latency_s": 2.06,
               "pass": true,
               "reason": ""
             }
@@ -76,7 +76,7 @@
                   }
                 }
               ],
-              "latency_s": 1.01,
+              "latency_s": 1.07,
               "pass": true,
               "reason": ""
             }
@@ -98,7 +98,7 @@
                   }
                 }
               ],
-              "latency_s": 1.23,
+              "latency_s": 1.56,
               "pass": true,
               "reason": ""
             }
@@ -120,7 +120,7 @@
                   }
                 }
               ],
-              "latency_s": 1.38,
+              "latency_s": 1.45,
               "pass": true,
               "reason": ""
             }
@@ -138,11 +138,11 @@
                 {
                   "name": "list_directory",
                   "args": {
-                    "path": "pages/"
+                    "path": "pages"
                   }
                 }
               ],
-              "latency_s": 0.99,
+              "latency_s": 0.91,
               "pass": true,
               "reason": ""
             }
@@ -157,7 +157,7 @@
               "prompt": "What is 2 + 2? Answer directly, no documents needed.",
               "form": "none",
               "calls": [],
-              "latency_s": 0.36,
+              "latency_s": 0.38,
               "pass": true,
               "reason": "no-tool expected"
             }
@@ -185,7 +185,7 @@
                   }
                 }
               ],
-              "latency_s": 1.63,
+              "latency_s": 1.68,
               "pass": true,
               "reason": ""
             }
@@ -207,7 +207,7 @@
                   }
                 }
               ],
-              "latency_s": 1.0,
+              "latency_s": 1.01,
               "pass": true,
               "reason": ""
             },
@@ -216,13 +216,19 @@
               "form": "structured",
               "calls": [
                 {
+                  "name": "list_directory",
+                  "args": {
+                    "path": "."
+                  }
+                },
+                {
                   "name": "read_file",
                   "args": {
                     "path": "pages/backup.md"
                   }
                 }
               ],
-              "latency_s": 1.14,
+              "latency_s": 2.73,
               "pass": true,
               "reason": ""
             }
@@ -250,72 +256,618 @@
                   }
                 }
               ],
-              "latency_s": 2.05,
+              "latency_s": 1.79,
               "pass": true,
               "reason": ""
             }
           ]
+        },
+        {
+          "id": "t11-uk-read",
+          "lang": "uk",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Прочитай, будь ласка, файл pages/server-setup.md.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/server-setup.md"
+                  }
+                }
+              ],
+              "latency_s": 1.87,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t12-pl-read-diacritics",
+          "lang": "pl",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Przeczytaj proszę plik pages/db-migration-2026-11.md — zwróć uwagę na cyfry i myślniki w nazwie.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/db-migration-2026-11.md"
+                  }
+                }
+              ],
+              "latency_s": 1.48,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t13-uk-search",
+          "lang": "uk",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Пошукай у вікі інформацію про резервні копії.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "search",
+                  "args": {
+                    "query": "резервні копії"
+                  }
+                },
+                {
+                  "name": "list_directory",
+                  "args": {
+                    "path": "/"
+                  }
+                }
+              ],
+              "latency_s": 2.18,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t14-pl-no-tool",
+          "lang": "pl",
+          "pass": false,
+          "turns": [
+            {
+              "prompt": "Jaka jest dziś pogoda w Katowicach? Odpowiedz bezpośrednio, dokumenty nie są potrzebne.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "search",
+                  "args": {
+                    "query": "pogoda Katowice"
+                  }
+                },
+                {
+                  "name": "list_directory",
+                  "args": {
+                    "path": "/"
+                  }
+                }
+              ],
+              "latency_s": 3.6,
+              "pass": false,
+              "reason": "unexpected tool call"
+            }
+          ]
         }
       ],
-      "score": 10,
-      "total": 10
+      "score": 13,
+      "total": 14
     },
     "pipeline": {
       "add_ok": true,
-      "add_latency_s": 203.72,
-      "add_log_excerpt": "doc...\n    summary............ 12.0s (in=869, out=253, cached=737)\n    concepts-plan.... 4.2s (in=1627, out=40, cached=865)\n    summary-rewrite............. 13.2s (in=1431, out=256, cached=1054)\n  [OK] резервные-копии.md added to knowledge base.\n\n\nSummary: Added: 6, Skipped: 0, Failed: 0, Deleted: 0",
+      "add_latency_s": 476.34,
+      "add_log_excerpt": "5)\n    Generating 1 concept(s) (concurrency=5)...\n    update: backup-lifecycle... 54.0s (in=1938, out=763, cached=1120)\n    summary-rewrite................. 17.4s (in=1539, out=295, cached=1369)\n  [OK] резервные-копии.md added to knowledge base.\n\n\nSummary: Added: 8, Skipped: 0, Failed: 0, Deleted: 0",
       "queries": [
         {
-          "q": "Какой порог тревоги по свободному месту на диске?",
+          "q": "What is the free disk space alarm threshold?",
+          "lang": "en",
           "unanswerable": false,
           "grounded": true,
-          "latency_s": 27.89,
+          "correct": true,
+          "pass": true,
+          "latency_s": 35.39,
           "note": "cited: ['server-setup.md']",
-          "answer_excerpt": "5 GiB**.\n\nИсточник: страница-резюме `[[summaries/server-setup]]` (исходный документ `sources/server-setup.md`):\n\n> **Порог аларма по диску:** `15 GiB` — при свободном месте меньше этого значения срабатывает предупреждение о низком заполнении дискового накопителя.\n\nКонтекст:\n- Это общая настройка мониторингового сервера, который запущен по адресу `192.168.0.137`.\n- Предупреждение срабатывает, когда **свободного** места на диске становится меньше 15 GiB — то есть по остатку, а не по занятому месту.\n\nСвязанная страница: [[concepts/network-vlan]] (сегментация сети, VLAN 100 выделен под серверы)."
+          "answer_excerpt": " the monitoring server at **192.168.0.137**. When free disk space drops to 15 GiB or below, the disk monitoring alert should fire — the intent being to warn about disk space shortage *before* it starts affecting monitoring operations.\n\nThe document also lists the related alerting concepts that govern this alarm:\n- **alerting** — the alerting system the disk alert must follow\n- **disk monitoring** — monitoring of disk fill level\n- **infrastructure** — the infrastructure context where the monitoring server is placed\n\nIn short: monitor the monitoring server's disk, and alert at **≤ 15 GiB free**."
+        },
+        {
+          "q": "How many backup generations are kept?",
+          "lang": "en",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 27.58,
+          "note": "cited: ['backup-rotation.md']",
+          "answer_excerpt": "umber of generations: 2** — the two most recent backup versions are preserved; when a new backup is created, the previous one is replaced and anything older is removed.\n- **Expiration: 14 days** — backups are deleted 14 days after creation.\n\nThe **Backup lifecycle** ([[concepts/backup-lifecycle]]) puts these together: backups are created **daily at 02:00 Warsaw time**, then enter the rotation cycle. A backup's life ends at whichever limit is reached first — the maximum generation count (2) or the 14-day storage window — which lets the environment control disk usage while keeping backups fresh."
+        },
+        {
+          "q": "When is the database migration scheduled?",
+          "lang": "en",
+          "unanswerable": false,
+          "grounded": false,
+          "correct": true,
+          "pass": false,
+          "latency_s": 34.88,
+          "note": "no expected page cited",
+          "answer_excerpt": "igration document.\n\nHere are the related details from the knowledge base:\n\n- **Backup window before migration:** The backup maintenance runs on Saturdays at **03:00 Warsaw time (CET/CEST)**. The latest backup window before the migration is **2026-11-28 at 03:00 Warsaw time**, providing a rollback snapshot in case the migration has issues.\n- **Daily backups:** Backups are made daily at **02:00 Warsaw time**, with retention of 2 generations and expiry at 14 days.\n- The migration document itself is informational only — it does not specify schema details, change volume, or step-by-step procedures."
+        },
+        {
+          "q": "Which VLAN is the server VLAN?",
+          "lang": "en",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 31.61,
+          "note": "cited: ['network-vlan.md']",
+          "answer_excerpt": "N видят друг друга как часть одной сети, а трафик между разными VLAN требует маршрутизации через межсегментный шлюз.\n\n**Зачем это нужно:**\n- Ограничение broadcast-трафика между серверами и остальными узлами;\n- Изоляция серверов от клиентских и гостевых сегментов;\n- Упрощение управления доступом и безопасность сети.\n\nСерверный VLAN также связан с жизненным циклом резервных копий (хранение бэкапов на серверах серверного VLAN) и с планом технического обслуживания серверов.\n\nПодробнее: [[concepts/network-vlan]], [[summaries/network-vlan]], [[concepts/backup-lifecycle]], [[summaries/server-setup]]."
+        },
+        {
+          "q": "How does a new employee get access?",
+          "lang": "en",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 53.63,
+          "note": "cited: ['onboarding.md']",
+          "answer_excerpt": "ess management** — управление доступом к системе\n- **provisioning** — провиженинг учётных записей\n\n### Note\n\nThe rest of the knowledge base (server setup on `192.168.0.137`, VLAN 100 as the server segment, backup rotation, DB migration on 2026-11-30) is unrelated to employee access provisioning — those pages are linked as \"related concepts\" only as topical neighbors, not as part of the onboarding process.\n\nIf you need the specifics (ticket template, SLA, roles), that information isn't in this knowledge base yet — the onboarding document only establishes that access goes through an ITSM ticket."
+        },
+        {
+          "q": "What is the router password in the server room?",
+          "lang": "en",
+          "unanswerable": true,
+          "grounded": false,
+          "correct": true,
+          "pass": false,
+          "latency_s": 58.48,
+          "note": "fabricated pages!",
+          "answer_excerpt": "rd, username, or configuration details are recorded anywhere.\n\nI checked the summaries and concept pages for `server-setup`, `network-vlan`, `onboarding`, `обслуговування-сервера`, `резервные-копии`, plus the related concepts (`server-maintenance`, `maintenance-window`, `onboarding`). None of them contain credentials.\n\nIf you need the actual router password, it's likely stored somewhere outside this wiki — check the onboarding ITSM ticket, the server-room equipment label, or the network administration docs. I'd be glad to help you search for any of those if you can point me to where they live."
+        },
+        {
+          "q": "Какой порог тревоги по свободному месту на диске?",
+          "lang": "ru",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 21.79,
+          "note": "cited: ['server-setup.md']",
+          "answer_excerpt": "анства**.\n\nЭто указано в документе `summaries/server-setup.md`:\n\n- **Что контролируется:** заполнение дискового пространства на сервере мониторинга, который работает по адресу **192.168.0.137**.\n- **Порог алерта:** при достижении значения в **15 GiB** свободного места должен срабатывать алерт.\n- **Назначение:** предупредить о нехватке дискового пространства до того, как она повлияет на работу мониторинга.\n\nТакже в документе перечислено, что стоит отслеживать: доступность сервера на 192.168.0.137, свободное место относительно порога в 15 GiB и время реакции на заполнение дискового пространства."
         },
         {
           "q": "Сколько поколений бэкапов хранится?",
+          "lang": "ru",
           "unanswerable": false,
           "grounded": true,
-          "latency_s": 20.58,
-          "note": "cited: ['backup-rotation.md']",
-          "answer_excerpt": "оления** резервных копий.\n\n**Как это работает** (по данным wiki):\n\n- **Глубина хранения = 2 поколения** — сохраняются только два поколения бэкапов; более старые копируются удаляются в рамках ротации.\n- **Срок жизни = 14 дней** — копии старше 14 дней экспирируются (удаляются).\n\n**Зачем это нужно**: ротация ограничивает объём хранилища, контролирует стоимость хранения и даёт предсказуемый срок жизни бэкапов. При восстановлении известно, какие поколения доступны, и их легко отыскать.\n\nЭта политика описана на странице [[summaries/backup-rotation]] и собрана в концепте [[concepts/backup-rotation]]."
+          "correct": true,
+          "pass": true,
+          "latency_s": 59.18,
+          "note": "cited: ['backup-rotation.md', 'резервные-копии.md']",
+          "answer_excerpt": "о при достижении максимума в 2 поколения, либо при истечении 14 дней хранения — что позволяет контролировать объём хранилища и актуальность данных.\n\n## Связанные документы\n\n- `[[summaries/резервные-копии]]` — ежедневное копирование в 02:00 по Варшаве, вопросы RPO/RTO.\n- `[[concepts/backup-lifecycle]]` — полный путь резервной копии от создания до удаления.\n- `[[concepts/db-migration]]` — миграция БД на 2026-11-30 с окном резервного копирования в субботу 2026-11-28 в 03:00 по времени Варшавы.\n- `[[summaries/harmonogram-konserwacji]]` — плановое обслуживание баз данных в субботу 03:00 по Варшаве."
         },
         {
           "q": "Когда запланирована миграция базы данных?",
+          "lang": "ru",
           "unanswerable": false,
-          "grounded": true,
-          "latency_s": 33.48,
-          "note": "cited: ['db-migration-2026-11.md']",
-          "answer_excerpt": "p-rotation]]): во время миграции особенно актуальна политика хранения — сохраняются **2 поколения** копий, копии старше **14 дней** экспирируются. Это важно учитывать при подготовке окна миграции, чтобы не потерять доступные поколения.\n- **Сегментация сети** ([[concepts/network-vlan]]): серверы изолированы в **VLAN 100**, что влияет на доступность серверного сегмента во время миграции.\n- **Мониторинг** ([[summaries/server-setup]]): сервер мониторинга — `192.168.0.137`, порог аларма по свободному месту на диске — **15 GiB**; низкий остаток диска может стать сигналом при подготовке к миграции."
+          "grounded": false,
+          "correct": true,
+          "pass": false,
+          "latency_s": 37.84,
+          "note": "no expected page cited",
+          "answer_excerpt": "бота)**, что даёт запасной снимок данных для отката на случай проблем с переносом.\n\n**Порядок действий** (по концепции «Миграция базы данных»):\n1. **Выгрузка** — из старой схемы создаётся полный снимок данных.\n2. **Сверка** — перенос данных в новую схему с последующим сравнением содержимого.\n3. **Переход сервисов** — сервисы переключаются на новую схему.\n4. **Удаление** — после подтверждения перехода удаляются старые данные.\n\nТаким образом, саму миграцию стоит ожидать **30.11.2026**, а подготовительное резервное копирование с возможностью отката — **28.11.2026 в 03:00 по варшавскому времени**."
         },
         {
           "q": "Какой VLAN является серверным?",
+          "lang": "ru",
           "unanswerable": false,
           "grounded": true,
-          "latency_s": 13.63,
+          "correct": true,
+          "pass": true,
+          "latency_s": 40.92,
           "note": "cited: ['network-vlan.md']",
-          "answer_excerpt": "Серверным VLANом в этой базе знаний является **VLAN 100**.\n\nИсточник: [[summaries/network-vlan]] — в документе зафиксировано, что VLAN 100 выделен под серверы. Это базовое понятие сегментации сети: серверы изолированы в собственном broadcast domain, что обеспечивает разделение зон ответственности, более строгую безопасность и чистое управление трафиком."
+          "answer_excerpt": "вном копировании (ежедневное копирование в 02:00 по варшавскому времени, ротация поколений, экспирация через 14 дней) — см. [[concepts/backup-lifecycle]]\n- На серверах выполняется миграция базы данных 2026-11-30 с окном резервного копирования в субботу 2026-11-28 в 03:00 по времени Варшавы — см. [[concepts/db-migration]]\n- Мониторинговый сервер размещается на 192.168.0.137 с порогом предупреждения о диске в 15 GiB свободного места — см. [[summaries/server-setup]]\n\nТаким образом, если вам нужен отдельный серверный сегмент, это **VLAN 100**, изолированный от клиентских и гостевых сегментов сети."
         },
         {
           "q": "Как новый сотрудник получает доступ?",
+          "lang": "ru",
           "unanswerable": false,
           "grounded": true,
-          "latency_s": 28.14,
+          "correct": true,
+          "pass": true,
+          "latency_s": 34.1,
           "note": "cited: ['onboarding.md']",
-          "answer_excerpt": "а; единая форма запроса и управления доступом.\n- **Доступ** — результат онбординга; выдаётся по тикету, а не вручную.\n- **Новый сотрудник** — участник процесса онбординга; роль, требующая доступа к системам компании.\n\n**Связанные процессы:**\n- **Онбординг новых сотрудников** — общий процесс адаптации, в ходе которого сотруднику предоставляется доступ к внутренним системам и инфраструктуре.\n- **Сетевая сегментация (VLAN)** — правила доступа к сегментам сети (например, VLAN 100 выделен под серверы), что определяет, к каким ресурсам может быть выдан доступ.\n\n**Источник:** [[summaries/onboarding]]"
+          "answer_excerpt": "учётных записей;\n- списках ролей/прав, которые выдаются новичку;\n- каких-либо альтернативных каналах выдачи доступа.\n\n## Связанные страницы\n\n- [[summaries/onboarding]] — краткая сводка исходного документа (онбординг)\n- [[concepts/onboarding]] — общая концепция онбординга нового сотрудника\n\nСвязанные темой концепты: *itsm ticket* (ITSM-тикет как канал выдачи доступа) и *access management* (управление доступом к системе).\n\n> Если вам нужны детали (шаблон заявки, сроки, роли), их нет в текущей базе знаний — рекомендую уточнить у ответственного за ITSM-процесс или запросить расширенную информацию."
         },
         {
           "q": "Какой пароль у роутера в серверной?",
+          "lang": "ru",
           "unanswerable": true,
           "grounded": true,
-          "latency_s": 138.17,
+          "correct": true,
+          "pass": true,
+          "latency_s": 67.06,
+          "note": "",
+          "answer_excerpt": "mmaries/server-setup]]** — настройки мониторингового сервера (192.168.0.137, порог 15 GiB)\n- **[[summaries/onboarding]]** / **[[concepts/onboarding]]** — выдача доступа через ITSM-тикет\n\nНи в одном документе нет упоминания роутера, его IP-адреса, модели или пароля. Скорее всего, пароль описан в отдельном источнике, который не попал в эту базу знаний (например, в сетевом руководстве, справочнике учётных данных или документе про ITSM-процедуры).\n\nЕсли вы знаете, где именно хранится документация по сети (например, отдельный wiki/раздел с credentials), уточните — и я попробую найти информацию там."
+        },
+        {
+          "q": "Який поріг тривоги за вільним місцем на диску?",
+          "lang": "uk",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 35.01,
+          "note": "cited: ['server-setup.md']",
+          "answer_excerpt": " значення, має спрацювати алерт, щоб попередити про дефіцит дискового простору до того, як він вплине на роботу моніторингу.\n- **Контекст:** це поріг для **моніторингового сервера на 192.168.0.137** — основної точки збору даних в інфраструктурі.\n- **Що слід моніторити:** доступність сервера `192.168.0.137`, вільне місце на диску відносно порога 15 GiB, і час реакції на заповнення дискового простору.\n- **Системний контекст:** алерт має підкорятися системі оповіщень **alerting**.\n\nОтже, якщо вільного місця на диску залишиться **15 GiB і менше** — це межа, після якої має бути згенеровано тривогу."
+        },
+        {
+          "q": "Скільки поколінь резервних копій зберігається?",
+          "lang": "uk",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 33.03,
+          "note": "cited: ['backup-rotation.md']",
+          "answer_excerpt": "aries/backup-rotation.md)** — політика ротации: 2 покоління, експірація через 14 днів.\n- **[concepts/backup-retention.md](concepts/backup-retention.md)** — політика зберігання: 2 покоління (зберігаються два останніх версії даних) та видалення після 14 днів із моменту створення.\n- **[concepts/backup-lifecycle.md](concepts/backup-lifecycle.md)** — життєвий цикл: після створення нова копія замінює попередню, а далі копія видаляється або за досягнення ліміту поколінь, або за терміном експірації.\n\nОтже, активних версій одночасно — **дві** (теперішня та попередня), а старіші автоматично видаляються."
+        },
+        {
+          "q": "Коли запланована міграція бази даних?",
+          "lang": "uk",
+          "unanswerable": false,
+          "grounded": false,
+          "correct": true,
+          "pass": false,
+          "latency_s": 71.75,
+          "note": "no expected page cited",
+          "answer_excerpt": "тика збереження визначає, як довго вони зберігаються для можливості відкату.\n\n## Додаткові аспекти\n\n- **Доступність сервісу** під час зміни схеми БД є важливим аспектом міграції.\n- **Структура таблиць, колонок і зв'язків** — те, що затрагує міграція.\n- Міграція може бути пов'язана із **серверним VLAN** (VLAN 100 як серверний сегмент) та загальним **моніторинговим сервером**.\n\n## Джерела\n\n- Документ «DB migration» (2026-11)\n- Концепція «Міграція бази даних»\n- Концепція «Технічне обслуговування сервера»\n- Концепція «Життєвий цикл резервних копій»\n- Концепція «Політика збереження резервних копій»"
+        },
+        {
+          "q": "Який VLAN є серверним?",
+          "lang": "uk",
+          "unanswerable": false,
+          "grounded": false,
+          "correct": true,
+          "pass": false,
+          "latency_s": 32.65,
+          "note": "no expected page cited",
+          "answer_excerpt": " **Изоляция серверов** от клиентских и гостевых сегментов;\n- **Упрощение управления доступом и безопасности** сети.\n\nТакже серверный VLAN обычно является точкой выхода к сети хранения данных и внешним сетям.\n\n## Связанные страницы\n\n- [[concepts/server-maintenance]] — плановое ТО сервера (щопʼятниця о 23:00)\n- [[concepts/db-migration]] — миграция БД на 2026-11-30\n- [[concepts/backup-lifecycle]] — жизненный цикл резервных копий на серверах серверного VLAN\n- [[summaries/server-setup]] — мониторинговый сервер на 192.168.0.137\n- [[summaries/onboarding]] — выдача доступа новым сотрудникам через ITSM"
+        },
+        {
+          "q": "Як новий співробітник отримує доступ?",
+          "lang": "uk",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 61.42,
+          "note": "cited: ['onboarding.md']",
+          "answer_excerpt": "/db-migration]]** — міграція БД на 2026-11-30 (окно резервної копії — субота 2026-11-28, 03:00 за часом Варшави).\n- **[[concepts/backup-retention]]** — політика зберігання резервних копій (2 покоління, експірація через 14 днів).\n\n### 4. Що варто знати надалі\n\nДокумент onboarding є **точкою входу** у тему доступу нових співробітників. Якщо потрібні конкретні деталі (шаблон заявки, SLA, ролі), їх немає в Knowledge Base — доведеться звернутися до відповідального за ITSM-процес.\n\n---\n\n**Ключовий висновок:** новий співробітник отримує доступ через **ITSM-тикет**, поданий в межах onboarding-процесу."
+        },
+        {
+          "q": "Коли проводиться планове технічне обслуговування сервера?",
+          "lang": "uk",
+          "unanswerable": false,
+          "grounded": false,
+          "correct": true,
+          "pass": false,
+          "latency_s": 100.01,
+          "note": "no expected page cited",
+          "answer_excerpt": "ю **192.168.0.137** ([[summaries/server-setup]]). Під час обслуговування слід контролювати:\n- доступність сервера\n- вільне місце на диску (порог алерта — **15 GiB**)\n- час реакції на заповнення дискового простору\n\n## Практичне застосування\n\nПри плануванні робіт важливо узгоджувати режим ТО з іншими процесами, щоб уникнути конфліктів між окремими роботами та збереженням резервних копій. Також варто враховувати, що час у документах про резервне копіювання та обслуговування баз даных вказано **локально (час Варшави)**, а не за UTC — при розкладі робіт для інших строн необхідно перераховувати час."
+        },
+        {
+          "q": "Який пароль від роутера в серверній?",
+          "lang": "uk",
+          "unanswerable": true,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 213.15,
           "note": "",
           "answer_excerpt": "[ERROR] Query failed: Max turns (50) exceeded"
+        },
+        {
+          "q": "Jaki jest próg alarmowy wolnego miejsca na dysku?",
+          "lang": "pl",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 43.93,
+          "note": "cited: ['server-setup.md']",
+          "answer_excerpt": " ma zostać wygenerowane ostrzeżenie o zbliżającym się braku miejsca.\n- Alerte ma działać **zgodnie z systemem alerting** — czyli musi być częścią konfiguracji system opowiadań о alertach.\n- Ważne jest, aby **alerty o wypełnieniu dysku nie mogły wpłynąć na pracę monitorinґu**, dlatego próg ma działać zapobiegawczo — jeszcze zanim brak miejsca zacznie wpływać na działanie systemu.\n\nWarto pamiętać, że próg ten dotyczy **wolnego miejsca**, a nie zużycia — dlatego przy planowaniu wzrostu danych lub zmian konfiguracji należy śledzić zarówno zużycie, jak i pozostałe wolne miejsce względem tego progu."
+        },
+        {
+          "q": "Ile pokoleń kopii zapasowych jest przechowywanych?",
+          "lang": "pl",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 42.8,
+          "note": "cited: ['backup-rotation.md']",
+          "answer_excerpt": "удшем случае данные теряются за один день.\n\nПоскольку копия создаётся каждый день, а максимальный срок хранения составляет 14 дней, теоретически за этот период может накопиться до 14 копий — однако политикой ротации ограничено сохранение только 2 последних поколений. Поэтому на практике хранятся ровно две последние копии, а более ранние удаляются при ротации.\n\nЭта политика важна для управления дисковым пространством и соответствия требованиям к хранению данных.\n\n**Источник:** `[[summaries/backup-rotation]]` — «Политика ротации резервных копий: хранятся 2 поколения, экспирация — через 14 дней»."
+        },
+        {
+          "q": "Kiedy zaplanowana jest migracja bazy danych?",
+          "lang": "pl",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 60.78,
+          "note": "cited: ['db-migration-2026-11.md']",
+          "answer_excerpt": "тарой схемы создаётся полный снимок данных;\n2. **Сверка** — перенос данных в новую схему с последующим сравнением содержимого;\n3. **Переход сервисов** — сервисы переключаются на новую схему;\n4. **Удаление** — после подтверждения перехода старые данные удаляются.\n\n### Связанные политики хранения резервных копий\n\n- Ротация: сохраняются **2 поколения** резервных копий;\n- Экспирация: копии удаляются через **14 дней** после создания;\n- Создание: копии делаются **ежедневно в 02:00** по Варшаве.\n\nЭти правила важны для обеспечения возможности отката и контроля дискового пространства в период миграции."
+        },
+        {
+          "q": "Który VLAN jest serwerowy?",
+          "lang": "pl",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 47.22,
+          "note": "cited: ['network-vlan.md']",
+          "answer_excerpt": "ьный путь к хранилищу.** Серверный VLAN обычно имеет отдельный путь к сети хранения данных и внешним сетям.\n\n**Связанные страницы:**\n\n- [[concepts/network-vlan]] — концепция VLAN как механизма разделения сети на изолированные broadcast-домены\n- [[summaries/server-setup]] — описание мониторингового сервера на 192.168.0.137, размещённого в контексте этой сетевой схемы\n- [[concepts/backup-lifecycle]] — жизненный цикл резервных копий, которые могут храниться на серверах серверного VLAN\n- [[summaries/onboarding]] — путь выдачи доступа новым сотрудникам через ITSM-тикет в контексте сетевой топологии"
+        },
+        {
+          "q": "Jak nowy pracownik uzyskuje dostęp?",
+          "lang": "pl",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 31.83,
+          "note": "cited: ['onboarding.md']",
+          "answer_excerpt": " и именно через неё ему выдаётся доступ. Всё остальное в источнике не описано.\n\n**Связанные страницы в базе:**\n- [[concepts/onboarding]] — общая концепция онбординга и путь выдачи доступа через ITSM-тикет\n- [[summaries/onboarding]] — краткая сводка исходного документа\n- [[concepts/network-vlan]] — серверный VLAN (упоминается как смежная тема)\n- [[concepts/db-migration]] и [[concepts/backup-retention]] — перечислены как related, но к процессу выдачи доступа не относятся напрямую\n\nЕсли вам нужны детали процесса (шаги, роли, сроки), их в этой базе нет — потребуется уточнить у администратора ITSM."
+        },
+        {
+          "q": "Kiedy odbywa się konserwacja zapasowa?",
+          "lang": "pl",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 53.94,
+          "note": "cited: ['harmonogram-konserwacji.md']",
+          "answer_excerpt": "rmacje\n\n- **Konserwacja zapasowa** najprawdopodobniej obejmuje tworzenie kopii zapasowych, walidację i utrzymanie magazynów danych — dokładna lista zadań nie została w dokumencie opisana.\n- Konserwacja ta jest częścią szerszego **cyklu życia kopii zapasowych** (daily backup 02:00, rotacja 2 pokolenia, expiracja po 14 dniach) — zob. `[[concepts/backup-lifecycle]]` i `[[concepts/backup-retention]]`.\n- Dokument nie zawiera informacji o **trwaniu okna konserwacji**, zależnościach środowiskowych, alertach ani procedurach awaryjnych — te elementy należałoby dopisać w kolejnych wersjach dokumentacji."
+        },
+        {
+          "q": "Jakie jest hasło do routera w serwerowni?",
+          "lang": "pl",
+          "unanswerable": true,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 38.92,
+          "note": "",
+          "answer_excerpt": "broadcast-домене, отделённом от клиентских и гостевых сегментов.\n- **Сервер мониторинга 192.168.0.137** (документ «Server setup») — с порогом алерта на заполнение диска в 15 GiB свободного места.\n\nНи в этих документах, ни в других страницах базы (резервные копии, обслуживание сервера, onboarding, миграция БД) не приводятся какие-либо учётные данные, логины или пароли оборудования. Если пароль действительно зафиксирован somewhere, он находится вне этой базы знаний — рекомендую уточнить его у администратора инфраструктуры или в ITSM-тикете (доступ новых сотрудников выдаётся через заявку в ITSM)."
         }
       ],
-      "score": 6,
-      "total": 6
+      "score": 20,
+      "total": 26,
+      "context_recall": {
+        "facts": [
+          {
+            "id": "ip-monitor",
+            "src": "server-setup.md",
+            "retained": false,
+            "found_in": []
+          },
+          {
+            "id": "disk-15",
+            "src": "server-setup.md",
+            "retained": true,
+            "found_in": [
+              "wiki/sources/server-setup.md",
+              "wiki/summaries/server-setup.md"
+            ]
+          },
+          {
+            "id": "backup-2-gen",
+            "src": "backup-rotation.md",
+            "retained": true,
+            "found_in": [
+              "wiki/concepts/backup-lifecycle.md",
+              "wiki/concepts/backup-retention.md",
+              "wiki/sources/backup-rotation.md",
+              "wiki/summaries/backup-rotation.md"
+            ]
+          },
+          {
+            "id": "backup-14-days",
+            "src": "backup-rotation.md",
+            "retained": true,
+            "found_in": [
+              "wiki/concepts/backup-lifecycle.md",
+              "wiki/concepts/backup-retention.md",
+              "wiki/sources/backup-rotation.md",
+              "wiki/summaries/backup-rotation.md"
+            ]
+          },
+          {
+            "id": "backup-0200-warsaw",
+            "src": "резервные-копии.md",
+            "retained": true,
+            "found_in": [
+              "wiki/concepts/backup-lifecycle.md",
+              "wiki/sources/резервные-копии.md",
+              "wiki/summaries/резервные-копии.md"
+            ]
+          },
+          {
+            "id": "migration-2026-11-30",
+            "src": "db-migration-2026-11.md",
+            "retained": true,
+            "found_in": [
+              "wiki/concepts/db-migration.md",
+              "wiki/sources/db-migration-2026-11.md",
+              "wiki/summaries/db-migration-2026-11.md"
+            ]
+          },
+          {
+            "id": "vlan-100",
+            "src": "network-vlan.md",
+            "retained": true,
+            "found_in": [
+              "wiki/concepts/network-vlan.md",
+              "wiki/sources/network-vlan.md",
+              "wiki/summaries/network-vlan.md"
+            ]
+          },
+          {
+            "id": "onboarding-itsm",
+            "src": "onboarding.md",
+            "retained": true,
+            "found_in": [
+              "wiki/concepts/onboarding.md",
+              "wiki/sources/onboarding.md",
+              "wiki/summaries/onboarding.md"
+            ]
+          },
+          {
+            "id": "uk-service-friday-2300",
+            "src": "обслуговування-сервера.md",
+            "retained": true,
+            "found_in": [
+              "wiki/concepts/maintenance-window.md",
+              "wiki/concepts/server-maintenance.md",
+              "wiki/sources/обслуговування-сервера.md",
+              "wiki/summaries/обслуговування-сервера.md"
+            ]
+          },
+          {
+            "id": "pl-konserwacja-sat-0300",
+            "src": "harmonogram-konserwacji.md",
+            "retained": true,
+            "found_in": [
+              "wiki/concepts/db-migration.md",
+              "wiki/sources/harmonogram-konserwacji.md",
+              "wiki/summaries/harmonogram-konserwacji.md"
+            ]
+          }
+        ],
+        "score": 9,
+        "total": 10
+      }
+    },
+    "context_recall": {
+      "facts": [
+        {
+          "id": "ip-monitor",
+          "src": "server-setup.md",
+          "retained": false,
+          "found_in": []
+        },
+        {
+          "id": "disk-15",
+          "src": "server-setup.md",
+          "retained": true,
+          "found_in": [
+            "wiki/sources/server-setup.md",
+            "wiki/summaries/server-setup.md"
+          ]
+        },
+        {
+          "id": "backup-2-gen",
+          "src": "backup-rotation.md",
+          "retained": true,
+          "found_in": [
+            "wiki/concepts/backup-lifecycle.md",
+            "wiki/concepts/backup-retention.md",
+            "wiki/sources/backup-rotation.md",
+            "wiki/summaries/backup-rotation.md"
+          ]
+        },
+        {
+          "id": "backup-14-days",
+          "src": "backup-rotation.md",
+          "retained": true,
+          "found_in": [
+            "wiki/concepts/backup-lifecycle.md",
+            "wiki/concepts/backup-retention.md",
+            "wiki/sources/backup-rotation.md",
+            "wiki/summaries/backup-rotation.md"
+          ]
+        },
+        {
+          "id": "backup-0200-warsaw",
+          "src": "резервные-копии.md",
+          "retained": true,
+          "found_in": [
+            "wiki/concepts/backup-lifecycle.md",
+            "wiki/sources/резервные-копии.md",
+            "wiki/summaries/резервные-копии.md"
+          ]
+        },
+        {
+          "id": "migration-2026-11-30",
+          "src": "db-migration-2026-11.md",
+          "retained": true,
+          "found_in": [
+            "wiki/concepts/db-migration.md",
+            "wiki/sources/db-migration-2026-11.md",
+            "wiki/summaries/db-migration-2026-11.md"
+          ]
+        },
+        {
+          "id": "vlan-100",
+          "src": "network-vlan.md",
+          "retained": true,
+          "found_in": [
+            "wiki/concepts/network-vlan.md",
+            "wiki/sources/network-vlan.md",
+            "wiki/summaries/network-vlan.md"
+          ]
+        },
+        {
+          "id": "onboarding-itsm",
+          "src": "onboarding.md",
+          "retained": true,
+          "found_in": [
+            "wiki/concepts/onboarding.md",
+            "wiki/sources/onboarding.md",
+            "wiki/summaries/onboarding.md"
+          ]
+        },
+        {
+          "id": "uk-service-friday-2300",
+          "src": "обслуговування-сервера.md",
+          "retained": true,
+          "found_in": [
+            "wiki/concepts/maintenance-window.md",
+            "wiki/concepts/server-maintenance.md",
+            "wiki/sources/обслуговування-сервера.md",
+            "wiki/summaries/обслуговування-сервера.md"
+          ]
+        },
+        {
+          "id": "pl-konserwacja-sat-0300",
+          "src": "harmonogram-konserwacji.md",
+          "retained": true,
+          "found_in": [
+            "wiki/concepts/db-migration.md",
+            "wiki/sources/harmonogram-konserwacji.md",
+            "wiki/summaries/harmonogram-konserwacji.md"
+          ]
+        }
+      ],
+      "score": 9,
+      "total": 10
     }
   }
 }
