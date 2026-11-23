@@ -452,3 +452,29 @@ If you find OpenKB useful, please give us a star 🌟 — and check out [**PageI
 [![Contact Us](https://img.shields.io/badge/Contact_Us-3B82F6?style=for-the-badge&logo=envelope&logoColor=white)](https://ii2abc2jejf.typeform.com/to/tK3AXl8T)
 
 </div>
+
+## Build versioning (#81)
+
+Three fields, surfaced on every interface:
+
+- **version** — the upstream SemVer release (`MAJOR.MINOR.PATCH`, hatch-vcs
+  from git tags; upstream mechanism, untouched).
+- **build** — the build number stamp `YYYYMMDD-HHMM-NNN` — UTC build date-time
+  + per-day build counter on the build host (`000` = first build of the day).
+- **channel** — the `stable` | `dev` marker (`stable` = a stamped build,
+  `dev` = source checkout fallback).
+- **train** — the composite display line: `v1.0.0 · 20261123-1745-000 · stable`.
+
+Surfaces:
+
+- **REST API**: `GET /api/v1/version` returns `{version, build, channel, train}`;
+  `GET /api/v1/meta` carries `version`, `build`, `channel`.
+- **GUI** (Settings → About): `v1.0.0 · 20261123-1745-000 · stable`.
+- **TUI** (chat REPL header, `openkb` diagnostics): same train line.
+
+Build stamp resolution: `OPENKB_BUILD_STAMP` env → baked `openkb/_build_stamp`
+file → `dev` fallback. Stamp a build at image build time:
+
+```bash
+python scripts/stamp_build.py   # writes openkb/_build_stamp, prints the stamp
+```

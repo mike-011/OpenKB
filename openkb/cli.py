@@ -3035,16 +3035,16 @@ _FEEDBACK_LABEL_MAP = {
 
 
 def _openkb_version() -> str:
-    """Return the installed openkb package version.
+    """Return the installed openkb package version + build stamp (#81).
 
-    Delegates to ``openkb.__version__`` so the chat REPL, feedback issue
-    body, and any future caller all surface the same fallback string
-    (``0.0.0+unknown`` from ``openkb/__init__.py``). Mirrors
+    Delegates to ``openkb.version.version_string`` so the chat REPL, feedback
+    issue body, and any future caller all surface the same line
+    (``v0.5.0rc1 · 20261123-1745-000``; ``dev`` build fallback). Mirrors
     ``openkb.agent.chat._openkb_version``.
     """
-    from openkb import __version__
+    from openkb.version import version_string
 
-    return __version__
+    return version_string()
 
 
 def _collect_feedback_diagnostics(ctx) -> dict[str, str]:

@@ -125,9 +125,9 @@ def _extract_preview(text: str, limit: int = 150) -> str:
 
 
 def _openkb_version() -> str:
-    from openkb import __version__
+    from openkb.version import version_string
 
-    return __version__
+    return version_string()
 
 
 def _display_kb_dir(kb_dir: Path) -> str:
@@ -143,7 +143,7 @@ def _display_kb_dir(kb_dir: Path) -> str:
 def _print_header(session: ChatSession, kb_dir: Path, style: Style) -> None:
     disp_dir = _display_kb_dir(kb_dir)
     version = _openkb_version()
-    version_suffix = f" v{version}\n" if version else "\n"
+    version_suffix = f" {version}\n" if version else "\n"
     print()
     _fmt(
         style,
