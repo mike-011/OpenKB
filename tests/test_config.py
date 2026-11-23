@@ -539,7 +539,7 @@ def test_query_agent_uses_global_language(_isolated_global, tmp_path, monkeypatc
 
     captured = {}
 
-    def _fake_build(wiki_root, model, *, language, bundle=None):
+    def _fake_build(wiki_root, model, *, language, bundle=None, generation_params=None):
         captured["language"] = language
         raise RuntimeError("stop-after-build")  # short-circuit before any LLM call
 
