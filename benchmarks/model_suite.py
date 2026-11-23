@@ -157,6 +157,39 @@ SCENARIOS: list[dict[str, Any]] = [
         "expect_tool": "read_file",
         "min_calls": 1,
     },
+    {
+        "id": "t11-uk-read",
+        "lang": "uk",
+        "prompt": "Прочитай, будь ласка, файл pages/server-setup.md.",
+        "expect_tool": "read_file",
+        "args_contains": {"path": "server-setup.md"},
+    },
+    {
+        "id": "t12-pl-read-diacritics",
+        "lang": "pl",
+        "prompt": (
+            "Przeczytaj proszę plik pages/db-migration-2026-11.md — "
+            "zwróć uwagę na cyfry i myślniki w nazwie."
+        ),
+        "expect_tool": "read_file",
+        "args_contains": {"path": "pages/db-migration-2026-11.md"},
+    },
+    {
+        "id": "t13-uk-search",
+        "lang": "uk",
+        "prompt": "Пошукай у вікі інформацію про резервні копії.",
+        "expect_tool": "search",
+        "args_contains": {"query": "резервн"},
+    },
+    {
+        "id": "t14-pl-no-tool",
+        "lang": "pl",
+        "prompt": (
+            "Jaka jest dziś pogoda w Katowicach? "
+            "Odpowiedz bezpośrednio, dokumenty nie są potrzebne."
+        ),
+        "expect_tool": None,
+    },
 ]
 
 FIXTURES: dict[str, str] = {
@@ -175,31 +208,174 @@ FIXTURES: dict[str, str] = {
     ),
     "network-vlan.md": "# Network VLAN\n\nVLAN 100 is the server VLAN.\n",
     "onboarding.md": ("# Onboarding\n\nNew employees get access through an ITSM ticket.\n"),
+    "обслуговування-сервера.md": (
+        "# Обслуговування сервера\n\n"
+        "Планове технічне обслуговування проводиться щопʼятниці о 23:00.\n"
+    ),
+    "harmonogram-konserwacji.md": (
+        "# Harmonogram konserwacji\n\n"
+        "Konserwacja zapasowa odbywa się w soboty o 03:00 czasu warszawskiego.\n"
+    ),
 }
 
 PIPELINE_QUESTIONS: list[dict[str, Any]] = [
+    # --- en ---
+    {
+        "q": "What is the free disk space alarm threshold?",
+        "lang": "en",
+        "expect_pages": ["server-setup.md"],
+        "expect_facts": ["disk-15"],
+    },
+    {
+        "q": "How many backup generations are kept?",
+        "lang": "en",
+        "expect_pages": ["backup-rotation.md", "резервные-копии.md"],
+        "expect_facts": ["backup-2-gen"],
+    },
+    {
+        "q": "When is the database migration scheduled?",
+        "lang": "en",
+        "expect_pages": ["db-migration-2026-11.md"],
+        "expect_facts": ["migration-2026-11-30"],
+    },
+    {
+        "q": "Which VLAN is the server VLAN?",
+        "lang": "en",
+        "expect_pages": ["network-vlan.md"],
+        "expect_facts": ["vlan-100"],
+    },
+    {
+        "q": "How does a new employee get access?",
+        "lang": "en",
+        "expect_pages": ["onboarding.md"],
+        "expect_facts": ["onboarding-itsm"],
+    },
+    {
+        "q": "What is the router password in the server room?",
+        "lang": "en",
+        "expect_pages": [],
+        "unanswerable": True,
+    },
+    # --- ru ---
     {
         "q": "Какой порог тревоги по свободному месту на диске?",
+        "lang": "ru",
         "expect_pages": ["server-setup.md"],
+        "expect_facts": ["disk-15"],
     },
     {
         "q": "Сколько поколений бэкапов хранится?",
+        "lang": "ru",
         "expect_pages": ["backup-rotation.md", "резервные-копии.md"],
+        "expect_facts": ["backup-2-gen"],
     },
     {
         "q": "Когда запланирована миграция базы данных?",
+        "lang": "ru",
         "expect_pages": ["db-migration-2026-11.md"],
+        "expect_facts": ["migration-2026-11-30"],
     },
     {
         "q": "Какой VLAN является серверным?",
+        "lang": "ru",
         "expect_pages": ["network-vlan.md"],
+        "expect_facts": ["vlan-100"],
     },
     {
         "q": "Как новый сотрудник получает доступ?",
+        "lang": "ru",
         "expect_pages": ["onboarding.md"],
+        "expect_facts": ["onboarding-itsm"],
     },
     {
         "q": "Какой пароль у роутера в серверной?",
+        "lang": "ru",
+        "expect_pages": [],
+        "unanswerable": True,
+    },
+    # --- uk ---
+    {
+        "q": "Який поріг тривоги за вільним місцем на диску?",
+        "lang": "uk",
+        "expect_pages": ["server-setup.md"],
+        "expect_facts": ["disk-15"],
+    },
+    {
+        "q": "Скільки поколінь резервних копій зберігається?",
+        "lang": "uk",
+        "expect_pages": ["backup-rotation.md", "резервные-копии.md"],
+        "expect_facts": ["backup-2-gen"],
+    },
+    {
+        "q": "Коли запланована міграція бази даних?",
+        "lang": "uk",
+        "expect_pages": ["db-migration-2026-11.md"],
+        "expect_facts": ["migration-2026-11-30"],
+    },
+    {
+        "q": "Який VLAN є серверним?",
+        "lang": "uk",
+        "expect_pages": ["network-vlan.md"],
+        "expect_facts": ["vlan-100"],
+    },
+    {
+        "q": "Як новий співробітник отримує доступ?",
+        "lang": "uk",
+        "expect_pages": ["onboarding.md"],
+        "expect_facts": ["onboarding-itsm"],
+    },
+    {
+        "q": "Коли проводиться планове технічне обслуговування сервера?",
+        "lang": "uk",
+        "expect_pages": ["обслуговування-сервера.md"],
+        "expect_facts": ["uk-service-friday-2300"],
+    },
+    {
+        "q": "Який пароль від роутера в серверній?",
+        "lang": "uk",
+        "expect_pages": [],
+        "unanswerable": True,
+    },
+    # --- pl ---
+    {
+        "q": "Jaki jest próg alarmowy wolnego miejsca na dysku?",
+        "lang": "pl",
+        "expect_pages": ["server-setup.md"],
+        "expect_facts": ["disk-15"],
+    },
+    {
+        "q": "Ile pokoleń kopii zapasowych jest przechowywanych?",
+        "lang": "pl",
+        "expect_pages": ["backup-rotation.md", "резервные-копии.md"],
+        "expect_facts": ["backup-2-gen"],
+    },
+    {
+        "q": "Kiedy zaplanowana jest migracja bazy danych?",
+        "lang": "pl",
+        "expect_pages": ["db-migration-2026-11.md"],
+        "expect_facts": ["migration-2026-11-30"],
+    },
+    {
+        "q": "Który VLAN jest serwerowy?",
+        "lang": "pl",
+        "expect_pages": ["network-vlan.md"],
+        "expect_facts": ["vlan-100"],
+    },
+    {
+        "q": "Jak nowy pracownik uzyskuje dostęp?",
+        "lang": "pl",
+        "expect_pages": ["onboarding.md"],
+        "expect_facts": ["onboarding-itsm"],
+    },
+    {
+        "q": "Kiedy odbywa się konserwacja zapasowa?",
+        "lang": "pl",
+        "expect_pages": ["harmonogram-konserwacji.md"],
+        "expect_facts": ["pl-konserwacja-sat-0300"],
+    },
+    {
+        "q": "Jakie jest hasło do routera w serwerowni?",
+        "lang": "pl",
         "expect_pages": [],
         "unanswerable": True,
     },
@@ -229,6 +405,144 @@ REFUSAL_MARKERS = (
     "не содержит",
     "в вики нет",
 )
+
+# Control facts for the context-recall (fact retention) group — one entry per
+# atomic fact (Summarization Content Units / FActScore style). ``needles`` are
+# alternates: a fact matches when ONE needle's tokens all occur in the SAME
+# sentence. Word needles match by prefix (>=2 chars), numbers/times exactly.
+FACTS: list[dict[str, Any]] = [
+    {"id": "ip-109", "src": "server-setup.md", "needles": [["192.168.100.109"]]},
+    {"id": "disk-15", "src": "server-setup.md", "needles": [["15", "gib"]]},
+    {
+        "id": "backup-2-gen",
+        "src": "backup-rotation.md",
+        "needles": [["2", "поколен"], ["2", "generation"], ["2", "pokole"], ["2", "поколін"]],
+    },
+    {
+        "id": "backup-14-days",
+        "src": "backup-rotation.md",
+        "needles": [["14", "дн"], ["14", "day"], ["14", "dni"], ["14", "dnia"]],
+    },
+    {
+        "id": "backup-0200-warsaw",
+        "src": "резервные-копии.md",
+        "needles": [["2:00", "варшав"], ["2:00", "warsaw"], ["2:00", "warszaw"]],
+    },
+    {
+        "id": "migration-2026-11-30",
+        "src": "db-migration-2026-11.md",
+        "needles": [["2026", "11", "30"]],
+    },
+    {"id": "vlan-100", "src": "network-vlan.md", "needles": [["vlan", "100"]]},
+    {"id": "onboarding-itsm", "src": "onboarding.md", "needles": [["itsm"]]},
+    {
+        "id": "uk-service-friday-2300",
+        "src": "обслуговування-сервера.md",
+        "needles": [["23:00", "п'ятниц"], ["23:00", "friday"], ["23:00", "piątek"]],
+    },
+    {
+        "id": "pl-konserwacja-sat-0300",
+        "src": "harmonogram-konserwacji.md",
+        "needles": [["3:00", "sobot"], ["3:00", "saturday"], ["3:00", "субот"]],
+    },
+]
+
+MONTHS: dict[str, str] = {
+    "января": "1",
+    "февраля": "2",
+    "марта": "3",
+    "апреля": "4",
+    "мая": "5",
+    "июня": "6",
+    "июля": "7",
+    "августа": "8",
+    "сентября": "9",
+    "октября": "10",
+    "ноября": "11",
+    "декабря": "12",
+    "січня": "1",
+    "лютого": "2",
+    "березня": "3",
+    "квітня": "4",
+    "травня": "5",
+    "червня": "6",
+    "липня": "7",
+    "серпня": "8",
+    "вересня": "9",
+    "жовтня": "10",
+    "листопада": "11",
+    "грудня": "12",
+    "stycznia": "1",
+    "lutego": "2",
+    "marca": "3",
+    "kwietnia": "4",
+    "maja": "5",
+    "czerwca": "6",
+    "lipca": "7",
+    "sierpnia": "8",
+    "września": "9",
+    "października": "10",
+    "listopada": "11",
+    "grudnia": "12",
+    "january": "1",
+    "february": "2",
+    "march": "3",
+    "april": "4",
+    "june": "6",
+    "july": "7",
+    "august": "8",
+    "september": "9",
+    "october": "10",
+    "november": "11",
+    "december": "12",
+    "may": "5",
+}
+
+UNIT_SYNONYMS: dict[str, str] = {
+    "gb": "gib",
+    "гб": "gib",
+    "гіб": "gib",
+    "gigabytes": "gib",
+    "gigabyte": "gib",
+    "гigabytes": "gib",
+    "гігабайт": "gib",
+    "гігабайти": "gib",
+    "гigabyte": "gib",
+}
+
+
+def normalize_tokens(text: str) -> list[str]:
+    """NFKC + lowercase + canonical units/dates/times -> comparable tokens."""
+    import unicodedata
+
+    text = unicodedata.normalize("NFKC", text).lower()
+    text = text.replace("’", "'").replace("`", "'").replace("ʼ", "'")
+    text = re.sub(r"\b(\d{1,2}):(\d{2})\b", lambda m: f" {int(m.group(1))}:{m.group(2)} ", text)
+    text = re.sub(r"\b(\d{4})-(\d{2})-(\d{2})\b", r" \1 \2 \3 ", text)
+    for name, num in MONTHS.items():
+        text = re.sub(rf"\b{name}\b", f" {num} ", text)
+    tokens = re.findall(r"[a-zа-яіїєґё']+|\d+(?::\d+)?", text)
+    return [UNIT_SYNONYMS[t] if t in UNIT_SYNONYMS else t for t in tokens]
+
+
+def needle_matches(tokens: list[str], needle: list[str]) -> bool:
+    for part in needle:
+        if part.isdigit() or ":" in part:
+            if part not in tokens:
+                return False
+        elif not any(part in t for t in tokens):
+            return False
+    return True
+
+
+def fact_in_text(text: str, needles: list[list[str]]) -> bool:
+    """A fact matches when one needle sits inside ONE sentence (token window)."""
+    for sentence in re.split(r"(?<=[.!?…])\s+|\n+", text):
+        tokens = normalize_tokens(sentence)
+        for needle in needles:
+            if needle_matches(tokens, needle):
+                return True
+    return False
 
 
 def _post_json(
@@ -383,7 +697,9 @@ def _run_cli(args: list[str], cwd: Path, env: dict[str, str]) -> tuple[int, str]
     return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
 
 
-def run_pipeline_group(api_base: str, provider: str, model: str, ctx: int) -> dict[str, Any]:
+def run_pipeline_group(
+    api_base: str, provider: str, model: str, ctx: int, with_queries: bool = True
+) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="openkb-bench-") as tmp:
         kb = Path(tmp) / "kb"
         kb.mkdir()
@@ -408,8 +724,27 @@ def run_pipeline_group(api_base: str, provider: str, model: str, ctx: int) -> di
         add_latency = time.monotonic() - started
         add_ok = "added" in add_out.lower()
 
+        # Context recall (fact retention): every control fact must survive wiki
+        # generation and live on a real page (not just the index).
+        wiki_texts: list[tuple[str, str]] = []
+        for path in sorted(kb.rglob("*.md")):
+            if "raw" in path.parts or path.name == "index.md":
+                continue
+            wiki_texts.append((str(path.relative_to(kb)), path.read_text()))
+        recall_rows: list[dict[str, Any]] = []
+        for fact in FACTS:
+            hits = [name for name, text in wiki_texts if fact_in_text(text, fact["needles"])]
+            recall_rows.append(
+                {"id": fact["id"], "src": fact["src"], "retained": bool(hits), "found_in": hits}
+            )
+        recall = {
+            "facts": recall_rows,
+            "score": sum(1 for r in recall_rows if r["retained"]),
+            "total": len(recall_rows),
+        }
+
         queries: list[dict[str, Any]] = []
-        for item in PIPELINE_QUESTIONS:
+        for item in PIPELINE_QUESTIONS if with_queries else []:
             started = time.monotonic()
             code, out = _run_cli(["openkb", "query", "--raw", item["q"]], kb, env)
             latency = time.monotonic() - started
@@ -418,23 +753,33 @@ def run_pipeline_group(api_base: str, provider: str, model: str, ctx: int) -> di
                 fabricated = any(p.lower() in out_l for p in FIXTURES)
                 refusal = any(m in out_l for m in REFUSAL_MARKERS)
                 grounded = (not fabricated) or refusal
+                correct = True
                 note = "fabricated pages!" if fabricated and not refusal else ""
             else:
                 cited = answer_cites(out, item["expect_pages"])
                 grounded = bool(cited)
-                note = f"cited: {cited}" if cited else "no expected page cited"
+                wanted = [f for f in FACTS if f["id"] in (item.get("expect_facts") or [])]
+                missing = [f["id"] for f in wanted if not fact_in_text(out, f["needles"])]
+                correct = not missing
+                note = f"cited: {cited}" if grounded else "no expected page cited"
+                if missing:
+                    note += f" | facts missing: {missing}"
+            ok = grounded and correct
             queries.append(
                 {
                     "q": item["q"],
+                    "lang": item.get("lang", ""),
                     "unanswerable": bool(item.get("unanswerable")),
                     "grounded": grounded,
+                    "correct": correct,
+                    "pass": ok,
                     "latency_s": round(latency, 2),
                     "note": note,
                     "answer_excerpt": out.strip()[-600:],
                 }
             )
 
-    score = sum(1 for q in queries if q["grounded"])
+    score = sum(1 for q in queries if q["pass"])
     return {
         "add_ok": add_ok,
         "add_latency_s": round(add_latency, 2),
@@ -442,6 +787,7 @@ def run_pipeline_group(api_base: str, provider: str, model: str, ctx: int) -> di
         "queries": queries,
         "score": score,
         "total": len(queries),
+        "context_recall": recall,
     }
 
 
@@ -490,18 +836,36 @@ def render_report(results: dict[str, Any]) -> str:
     pipeline = results.get("groups", {}).get("pipeline")
     if pipeline:
         lines += [
-            "## Group: OpenKB pipeline (fixture KB)",
+            "## Group: OpenKB pipeline (fixture KB) — faithfulness + answer correctness",
             "",
             f"**Score: {pipeline['score']}/{pipeline['total']}** · "
             f"add: {'ok' if pipeline['add_ok'] else 'FAILED'} ({pipeline['add_latency_s']} s)",
             "",
-            "| Question | Grounded | Latency s | Note |",
-            "|---|---|---|---|",
+            "| Question | Lang | Cited | Facts | Latency s | Note |",
+            "|---|---|---|---|---|---|",
         ]
         for q in pipeline["queries"]:
             lines.append(
-                f"| {q['q'][:48]}… | {'✅' if q['grounded'] else '❌'} "
+                f"| {q['q'][:48]}… | {q.get('lang', '')} "
+                f"| {'✅' if q['grounded'] else '❌'} | {'✅' if q['correct'] else '❌'} "
                 f"| {q['latency_s']} | {q['note']} |"
+            )
+        lines.append("")
+    recall = results.get("groups", {}).get("context_recall")
+    if recall:
+        lines += [
+            "## Group: context recall (fact retention — SCU / FActScore style)",
+            "",
+            f"**Retention: {recall['score']}/{recall['total']}** — control facts "
+            "surviving wiki generation (must live on a page, not just the index)",
+            "",
+            "| Fact | Source | Retained | Found in |",
+            "|---|---|---|---|",
+        ]
+        for f in recall["facts"]:
+            lines.append(
+                f"| {f['id']} | {f['src']} | {'✅' if f['retained'] else '❌'} "
+                f"| {', '.join(f['found_in'])} |"
             )
         lines.append("")
     return "\n".join(lines) + "\n"
@@ -515,7 +879,7 @@ def main() -> None:
     parser.add_argument("--ctx", type=int, default=32768)
     parser.add_argument("--label", default=None, help="output dir name")
     parser.add_argument("--out", default="docs/local-llm")
-    parser.add_argument("--groups", default="tools,pipeline")
+    parser.add_argument("--groups", default="tools,pipeline,context-recall")
     parser.add_argument(
         "--api-key-env",
         default=None,
@@ -533,8 +897,18 @@ def main() -> None:
         groups["tools"] = run_tools_group(
             args.api_base, args.provider, args.model, args.ctx, api_key=api_key
         )
-    if "pipeline" in wanted:
-        groups["pipeline"] = run_pipeline_group(args.api_base, args.provider, args.model, args.ctx)
+    if "pipeline" in wanted or "context-recall" in wanted:
+        pipe = run_pipeline_group(
+            args.api_base,
+            args.provider,
+            args.model,
+            args.ctx,
+            with_queries="pipeline" in wanted,
+        )
+        if "pipeline" in wanted:
+            groups["pipeline"] = pipe
+        if "context-recall" in wanted:
+            groups["context_recall"] = pipe["context_recall"]
 
     results = {
         "label": label,

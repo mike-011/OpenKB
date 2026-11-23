@@ -99,6 +99,41 @@ class TestAnswerCites:
         assert ms.answer_cites("just prose", ["server-setup.md"]) == []
 
 
+class TestNormalizeFacts:
+    def test_units_dates_times_canonical(self):
+        toks = ms.normalize_tokens(
+            "Порог 15 ГБ; миграция 30 ноября 2026; резерв в 02:00 по Варшаве"
+        )
+        assert "15" in toks and "gib" in toks
+        assert "2:00" in toks
+        assert "30" in toks and "11" in toks and "2026" in toks
+
+    def test_fact_matches_same_sentence(self):
+        text = "Порог тревоги — 15 GiB свободного места. Другое предложение."
+        fact = next(f for f in ms.FACTS if f["id"] == "disk-15")
+        assert ms.fact_in_text(text, fact["needles"])
+
+    def test_fact_split_across_sentences_fails(self):
+        text = "Порог тревоги — 15. В другом предложении говорится про GiB."
+        fact = next(f for f in ms.FACTS if f["id"] == "disk-15")
+        assert not ms.fact_in_text(text, fact["needles"])
+
+    def test_uk_compound_token_fact(self):
+        text = "Планове технічне обслуговування проводиться щопʼятниці о 23:00."
+        fact = next(f for f in ms.FACTS if f["id"] == "uk-service-friday-2300")
+        assert ms.fact_in_text(text, fact["needles"])
+
+    def test_date_written_out_matches_iso_fact(self):
+        text = "Миграция назначена на 30 ноября 2026 года."
+        fact = next(f for f in ms.FACTS if f["id"] == "migration-2026-11-30")
+        assert ms.fact_in_text(text, fact["needles"])
+
+    def test_pl_diacritics_fact(self):
+        text = "Konserwacja zapasowa odbywa się w soboty o 03:00 czasu warszawskiego."
+        fact = next(f for f in ms.FACTS if f["id"] == "pl-konserwacja-sat-0300")
+        assert ms.fact_in_text(text, fact["needles"])
+
+
 class TestReport:
     def test_report_pins_dates_and_scores(self):
         results = {
@@ -135,7 +170,35 @@ class TestReport:
                     "total": 1,
                     "add_ok": True,
                     "add_latency_s": 2.0,
-                    "queries": [{"q": "demo?", "grounded": True, "latency_s": 3.0, "note": ""}],
+                    "queries": [
+                        {
+                            "q": "demo?",
+                            "lang": "en",
+                            "grounded": True,
+                            "correct": True,
+                            "pass": True,
+                            "latency_s": 3.0,
+                            "note": "",
+                        }
+                    ],
+                },
+                "context_recall": {
+                    "score": 1,
+                    "total": 2,
+                    "facts": [
+                        {
+                            "id": "disk-15",
+                            "src": "server-setup.md",
+                            "retained": True,
+                            "found_in": ["pages/x.md"],
+                        },
+                        {
+                            "id": "vlan-100",
+                            "src": "network-vlan.md",
+                            "retained": False,
+                            "found_in": [],
+                        },
+                    ],
                 },
             },
         }
@@ -144,3 +207,4 @@ class TestReport:
         assert "abc1234" in report
         assert "1/1" in report
         assert "| t01 |" in report
+        assert "Retention: 1/2" in report
