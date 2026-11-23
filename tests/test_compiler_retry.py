@@ -156,7 +156,7 @@ class TestRetryKwargForwarding:
 
     def test_llm_call_forwards_num_retries_not_retries(self):
         with patch(
-            "openkb.agent.compiler.litellm.completion", return_value=_fake_response()
+            "openkb.agent.compiler.litellm.completion", return_value=[_fake_response()]
         ) as completion:
             _llm_call("gpt-4o", [{"role": "user", "content": "hi"}], "step")
         assert completion.call_args.kwargs["num_retries"] == 2
@@ -164,7 +164,7 @@ class TestRetryKwargForwarding:
 
     def test_llm_call_does_not_override_explicit_num_retries(self):
         with patch(
-            "openkb.agent.compiler.litellm.completion", return_value=_fake_response()
+            "openkb.agent.compiler.litellm.completion", return_value=[_fake_response()]
         ) as completion:
             _llm_call("gpt-4o", [{"role": "user", "content": "hi"}], "step", num_retries=5)
         assert completion.call_args.kwargs["num_retries"] == 5
@@ -173,7 +173,7 @@ class TestRetryKwargForwarding:
         with patch(
             "openkb.agent.compiler.litellm.acompletion",
             new_callable=AsyncMock,
-            return_value=_fake_response(),
+            return_value=[_fake_response()],
         ) as acompletion:
             asyncio.run(_llm_call_async("gpt-4o", [{"role": "user", "content": "hi"}], "step"))
         assert acompletion.call_args.kwargs["num_retries"] == 2
