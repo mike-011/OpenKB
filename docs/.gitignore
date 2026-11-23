@@ -9,3 +9,8 @@
 !ollama_tool_call_adapter.md
 !ollama_no_tools_retry.md
 !fts-hybrid-retrieval.md
+# Local LLM bench reports (#60): per-model dirs of report.md + results.json
+!local-llm/
+!local-llm/**/
+!local-llm/**/*.md
+!local-llm/**/*.json
