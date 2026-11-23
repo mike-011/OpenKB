@@ -65,9 +65,7 @@ class TestBundleWire:
         (kb / ".openkb").mkdir(parents=True)
         return kb
 
-    def test_detected_base_injected_when_nothing_configured(
-        self, monkeypatch, tmp_path
-    ):
+    def test_detected_base_injected_when_nothing_configured(self, monkeypatch, tmp_path):
         kb = self._isolate(monkeypatch, tmp_path)
         monkeypatch.setattr(
             "openkb.local_server.detect_local_api_base",
