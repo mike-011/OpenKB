@@ -641,9 +641,7 @@ def _add_single_file_locked(
     debug_enabled = bool(config.get("debug")) or logging.getLogger("openkb").isEnabledFor(
         logging.DEBUG
     )
-    with _per_file_debug_log(
-        kb_dir, file_path, enabled=debug_enabled
-    ) as log_path:
+    with _per_file_debug_log(kb_dir, file_path, enabled=debug_enabled) as log_path:
         outcome = _add_single_file_locked_impl(
             file_path, kb_dir, config, stage=stage, bundle=bundle, identity=identity
         )
