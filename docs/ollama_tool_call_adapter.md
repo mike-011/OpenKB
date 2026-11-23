@@ -37,18 +37,20 @@ all 12 model-resolution sites in `cli.py`.
 
 ### 2. Retry on tool-name hallucination
 
-`arun_with_retry()` and `run_streamed_with_retry()` wrap the SDK Runner
+`run_with_retry()`, `arun_with_retry()` and `run_streamed_with_retry()`
+wrap the SDK Runner
 in try/except for `ModelBehaviorError`. On error, a corrective message is
 appended:
 
 ```
 [SYSTEM CORRECTION 1] You tried to call a tool named 'get_topics',
 but that tool does not exist. The only available tools are:
-read_file, get_page_content, get_image. Please answer the original
+read_file, get_page_content, get_image, search. Please answer the original
 question using ONLY these tools. Do not invent tool names.
 ```
 
-Up to `tool_call_retries` times (configurable, default 3).
+The tool list is interpolated from the registered tools (the example
+shows the query/chat agent's current set). Up to `tool_call_retries` times (configurable, default 3).
 
 ### 3. Configurable timeout
 
@@ -147,7 +149,7 @@ with a corrective message and continues yielding events seamlessly.
 | `openkb/agent/compiler.py` | Passes `api_base` from env for CLI path |
 | `openkb/cli.py` | `rewrite_ollama_model` on all model resolutions |
 | `openkb/add_coordinator.py` | Imports adapter for side effects |
-| `tests/test_ollama_adapter.py` | 112 unit tests (rewrite, retry, sanitize, streaming) |
+| `tests/test_ollama_adapter.py` | 93 unit tests (rewrite, retry, sanitize, streaming) |
 | `tests/test_ollama_api_base.py` | api_base propagation tests (compiler + import side effect) |
 | `tests/test_ollama_wiring.py` | query routing / model rewrite tests |
 | `docs/ollama_tool_call_adapter.md` | This documentation |
@@ -156,10 +158,10 @@ with a corrective message and continues yielding events seamlessly.
 
 ```bash
 # Run adapter tests
-python -m pytest tests/test_ollama_adapter.py -v  # 112 passed
+python -m pytest tests/test_ollama_adapter.py -v  # 93 passed
 
 # Run full test suite (non-Ollama path unchanged)
-python -m pytest tests/ -q  # 1361 passed
+python -m pytest tests/ -q  # 1438 passed
 ```
 
 ## Minimum Model Requirements

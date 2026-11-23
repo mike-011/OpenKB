@@ -32,18 +32,23 @@ documents exist, then answer the question.
 ```
 You MUST use the read_file tool. Do NOT answer without reading files
 first. Start with read_file(path='summaries/index.md').
-Available tools: read_file, get_page_content.
+Available tools: search, read_file, get_page_content, get_image.
 ```
 
 ### Attempt 3 (final)
 ```
 IMPORTANT: Your previous answer was not grounded in the wiki.
-Call read_file now. The available tools are: read_file, get_page_content.
+Call read_file now. The available tools are: search, read_file, get_page_content, get_image.
 Do not answer until you have called a tool.
 ```
 
 If all retries are exhausted, the adapter returns the last (ungrounded)
 answer — it does not loop infinitely.
+
+The tool lists in attempts 2–3 are interpolated from the registered
+tools (`{tool_list}` in code); the examples show the query/chat agent's
+current set (incl. the FTS5 `search` pre-filter, see
+`docs/fts-hybrid-retrieval.md`).
 
 ## How It Works
 
@@ -55,7 +60,11 @@ registered tools, the no-tools retry is triggered.
 
 ### Retry Flow
 
-1. `Runner.run()` / `Runner.run_streamed()` completes successfully.
+Applies to the non-streamed paths (`run_with_retry()` /
+`arun_with_retry()`); the streamed path retries `ModelBehaviorError`
+only (see Limitations).
+
+1. `Runner.run()` completes successfully.
 2. Adapter checks: did the model call any tools?
 3. If yes → return result (normal path, no retry).
 4. If no → append nudge message, retry.
@@ -65,7 +74,7 @@ registered tools, the no-tools retry is triggered.
 ### Interaction with ModelBehaviorError retry
 
 The no-tools retry and the `ModelBehaviorError` retry share the same
-`max_retries` budget. A run that first hallucinates a tool name (triggering
+`tool_call_retries` budget (resolved internally as `max_retries`). A run that first hallucinates a tool name (triggering
 a `ModelBehaviorError` retry) and then answers without tools (triggering
 a no-tools retry) consumes two retry attempts from the same pool.
 
@@ -84,13 +93,13 @@ ollama:
 | File | Description |
 |---|---|
 | `openkb/agent/ollama_adapter.py` | Added `_has_tool_calls()`, `_build_nudge_message()`, `_append_nudge()`, and no-tools retry loop in `arun_with_retry()` / `run_with_retry()` |
-| `tests/test_ollama_adapter.py` | 112 unit tests (nudge retry, sanitize, streaming retry, config) |
+| `tests/test_ollama_adapter.py` | 93 unit tests (nudge retry, sanitize, streaming retry, config) |
 
 ## Testing
 
 ```bash
-python -m pytest tests/test_ollama_adapter.py -v  # 112 passed
-python -m pytest tests/ -q                          # 1361 passed
+python -m pytest tests/test_ollama_adapter.py -v  # 93 passed
+python -m pytest tests/ -q                          # 1438 passed
 ```
 
 ## Sanitization of Ungrounded Output
@@ -136,3 +145,7 @@ See also `docs/ollama_tool_call_adapter.md` for full model requirements.
 - The retry budget is shared with `ModelBehaviorError` retries. If a model
   both hallucinates tool names AND answers without tools, the retries may
   be consumed by the hallucination loop before the no-tools check runs.
+- The no-tools nudge runs only on the non-streamed paths
+  (`run_with_retry()` / `arun_with_retry()`). `run_streamed_with_retry()`
+  retries `ModelBehaviorError` only — a streamed run that answers without
+  tools is returned as-is.
