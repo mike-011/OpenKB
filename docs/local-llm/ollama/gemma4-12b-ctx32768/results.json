@@ -1,0 +1,303 @@
+{
+  "label": "gemma4-12b-ctx32768",
+  "model": "gemma4:12b",
+  "provider": "ollama_chat",
+  "api_base": "http://192.168.100.165:11434",
+  "ctx": 32768,
+  "harness_sha": "79bae6d",
+  "started_utc": "2026-11-23T14:10:13+00:00",
+  "finished_utc": "2026-11-23T15:05:26+00:00",
+  "groups": {
+    "tools": {
+      "scenarios": [
+        {
+          "id": "t01-en-read",
+          "lang": "en",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Read the wiki file pages/server-setup.md for me.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/server-setup.md"
+                  }
+                }
+              ],
+              "latency_s": 20.29,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t02-en-search",
+          "lang": "en",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Search the wiki for the backup rotation policy.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "search",
+                  "args": {
+                    "query": "backup rotation policy"
+                  }
+                }
+              ],
+              "latency_s": 2.13,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t03-ru-read",
+          "lang": "ru",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Прочитай, пожалуйста, файл pages/server-setup.md.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/server-setup.md"
+                  }
+                }
+              ],
+              "latency_s": 2.32,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t04-cyrillic-args",
+          "lang": "ru",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Открой файл pages/резервные-копии.md — страницу про резервные копии.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/резервные-копии.md"
+                  }
+                }
+              ],
+              "latency_s": 2.56,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t05-exact-args",
+          "lang": "en",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Read exactly pages/db-migration-2026-11.md — mind the digits and dashes in the name.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/db-migration-2026-11.md"
+                  }
+                }
+              ],
+              "latency_s": 2.94,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t06-list",
+          "lang": "en",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "What files are in the pages/ directory of the wiki?",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "list_directory",
+                  "args": {
+                    "path": "pages/"
+                  }
+                }
+              ],
+              "latency_s": 2.2,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t07-no-tool",
+          "lang": "en",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "What is 2 + 2? Answer directly, no documents needed.",
+              "form": "none",
+              "calls": [],
+              "latency_s": 3.15,
+              "pass": true,
+              "reason": "no-tool expected"
+            }
+          ]
+        },
+        {
+          "id": "t08-ru-search-cyrillic",
+          "lang": "ru",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Найди в вики информацию о политике резервного копирования.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "search",
+                  "args": {
+                    "query": "резервное копирование"
+                  }
+                }
+              ],
+              "latency_s": 3.06,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t09-sequential",
+          "lang": "en",
+          "pass": false,
+          "turns": [
+            {
+              "prompt": "Read pages/index.md.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/index.md"
+                  }
+                }
+              ],
+              "latency_s": 2.22,
+              "pass": true,
+              "reason": ""
+            },
+            {
+              "prompt": "Thanks. Now read the backup page too.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "list_directory",
+                  "args": {
+                    "path": "pages"
+                  }
+                }
+              ],
+              "latency_s": 4.66,
+              "pass": false,
+              "reason": "path lacks 'backup' in ['']"
+            }
+          ]
+        },
+        {
+          "id": "t10-parallel",
+          "lang": "en",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Read two files for me: pages/network-vlan.md and pages/onboarding.md.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/network-vlan.md"
+                  }
+                }
+              ],
+              "latency_s": 4.03,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        }
+      ],
+      "score": 9,
+      "total": 10
+    },
+    "pipeline": {
+      "add_ok": true,
+      "add_latency_s": 2945.95,
+      "add_log_excerpt": "....................................................................................................................................................................... 206.7s (in=1412, out=2791)\n  [OK] резервные-копии.md added to knowledge base.\n\n\nSummary: Added: 6, Skipped: 0, Failed: 0, Deleted: 0",
+      "queries": [
+        {
+          "q": "Какой порог тревоги по свободному месту на диске?",
+          "unanswerable": false,
+          "grounded": false,
+          "latency_s": 55.55,
+          "note": "no expected page cited",
+          "answer_excerpt": "Порог оповещения о свободном месте на диске составляет 15 GiB. Этот параметр входит в общие конфигурационные настройки для мониторинга сервера."
+        },
+        {
+          "q": "Сколько поколений бэкапов хранится?",
+          "unanswerable": false,
+          "grounded": false,
+          "latency_s": 30.16,
+          "note": "no expected page cited",
+          "answer_excerpt": "В системе хранится 2 поколения резервных копий. Согласно политике ротации и хранения, данные резервные копии также удаляются через 14 дней."
+        },
+        {
+          "q": "Когда запланирована миграция базы данных?",
+          "unanswerable": false,
+          "grounded": false,
+          "latency_s": 55.1,
+          "note": "no expected page cited",
+          "answer_excerpt": "ия уровня безопасности.\n\nОсновные аспекты данного процесса включают:\n*   **Обеспечение целостности данных:** Гарантирование того, что данные останутся неизменными и корректными на протяжении всего периода переноса.\n*   **Синхронизация:** Перенос схем таблиц, индексов и хранимых процедур.\n*   **Окна обслуживания:** Планирование работ в определенное время для минимизации влияния на пользователей.\n\nДанная операция тесно связана с процессами регулярного технического обслуживания системы ([[concepts/system-maintenance]]) и политиками управления жизненным циклом данных ([[concepts/data-retention]])."
+        },
+        {
+          "q": "Какой VLAN является серверным?",
+          "unanswerable": false,
+          "grounded": false,
+          "latency_s": 45.42,
+          "note": "no expected page cited",
+          "answer_excerpt": "рверной инфраструктуры используется **VLAN 100**. \n\nЭтот сегмент выделен специально для работы серверов, что является частью общей архитектуры сетевой инфраструктуры. Использование VLAN в данной системе позволяет обеспечить:\n*   **Сегментацию трафика**: ограничение области широковещательного трафика для улучшения производительности.\n*   **Безопасность**: изоляция серверной инфраструктуры от других функциональных групп устройств для предотвращения несанкционированного доступа.\n*   **Управление**: возможность гибко изменять конфигурацию сети без необходимости изменения физической инфраструктуры."
+        },
+        {
+          "q": "Как новый сотрудник получает доступ?",
+          "unanswerable": false,
+          "grounded": false,
+          "latency_s": 29.16,
+          "note": "no expected page cited",
+          "answer_excerpt": " информационным системам через процедуру онбординга. Основным механизмом реализации этого процесса является использование системы **ITSM**.\n\nПроцедура получения доступа заключается в следующем:\n*   **Создание тикета:** Доступ предоставляется путем создания соответствующего тикета в системе ITSM.\n*   **Обработка запроса:** После создания тикета система ITSM используется для обработки запроса и обеспечения сотрудника необходимыми правами для выполнения рабочих задач.\n\nЭтот процесс является ключевым этапом интеграции нового сотрудника, обеспечивая его необходимыми инструментами для начала работы."
+        },
+        {
+          "q": "Какой пароль у роутера в серверной?",
+          "unanswerable": true,
+          "grounded": true,
+          "latency_s": 95.87,
+          "note": "",
+          "answer_excerpt": "I could not find information about this in the knowledge base."
+        }
+      ],
+      "score": 1,
+      "total": 6
+    }
+  }
+}
