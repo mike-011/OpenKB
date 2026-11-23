@@ -108,3 +108,38 @@ jobs:
             openkb --help > /dev/null
             python /smoke/boot_smoke.py
           '
+
+  # UI e2e skeleton (Playwright): build the SPA, install the packaged app
+  # from the wheel, boot the REST app and run DOM-level smoke against the
+  # Studio shell (load, SPA fallback, API wiring). No LLM calls.
+  web-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@692973e3d973129bcbf40652eb9f2f61becf3332  # v4.1.7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: "20"
+
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
+        with:
+          version: "0.10.2"
+          enable-cache: true
+
+      - name: Build SPA and wheel, install app
+        run: |
+          (cd frontend && npm ci && npm run build)
+          uv build --wheel
+          python3 -m pip install -q uvicorn httpx "openkb[web,api] @ file://$(ls $PWD/dist/openkb-*.whl)"
+
+      - name: Install Playwright chromium
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run UI e2e
+        working-directory: frontend
+        run: npx playwright test
