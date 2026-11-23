@@ -445,6 +445,14 @@ def resolve_credential_bundle(kb_dir: Path) -> LlmCredentialBundle:
     api_key = _resolve_env("LLM_API_KEY")
     base_url = _resolve_env("OPENAI_API_BASE")
 
+    # Local-first convenience (#49): when nothing is configured at all,
+    # probe once per process for a local LLM server. Cloud users (any key
+    # or base set) never pay the probe.
+    if api_key is None and base_url is None:
+        from openkb.local_server import detect_local_api_base
+
+        base_url = detect_local_api_base()
+
     extra_headers: dict[str, str] = {}
     timeout: float | None = None
     parallel_tool_calls: bool | None = None
