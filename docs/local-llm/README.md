@@ -10,6 +10,7 @@
 
 | Model | Runtime | Tools (10) | Pipeline (6) | Notes | Report |
 |---|---|---|---|---|---|
+| mimo-v2.6-flash | Ollama Cloud | 9/10 | 6/6 | эталон (решение #41) | [report](cloud/mimo-v2.6-flash-ctx32768/report.md) |
 | _заполняется по мере прогонов_ | | | | | |
 
 Строки добавляются по мере прогонов; каждый прогон — отдельный тикет,

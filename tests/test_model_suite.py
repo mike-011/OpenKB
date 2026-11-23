@@ -86,6 +86,19 @@ class TestJudgeScenario:
         assert ms.judge_scenario(scenario, "structured", two)["pass"]
 
 
+class TestAnswerCites:
+    def test_wiki_link_stem_citation_counts(self):
+        answer = "Хранится два поколения, см. [[summaries/backup-rotation]]."
+        assert ms.answer_cites(answer, ["backup-rotation.md"]) == ["backup-rotation.md"]
+
+    def test_raw_filename_citation_counts(self):
+        answer = "See pages/server-setup.md for the threshold."
+        assert ms.answer_cites(answer, ["server-setup.md"]) == ["server-setup.md"]
+
+    def test_no_citation(self):
+        assert ms.answer_cites("just prose", ["server-setup.md"]) == []
+
+
 class TestReport:
     def test_report_pins_dates_and_scores(self):
         results = {

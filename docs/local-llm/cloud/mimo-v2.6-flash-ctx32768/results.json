@@ -1,0 +1,321 @@
+{
+  "label": "mimo-v2.6-flash-ctx32768",
+  "model": "mimo-v2.6-flash",
+  "provider": "openai",
+  "api_base": "https://ollama.com",
+  "ctx": 32768,
+  "harness_sha": "1d35428",
+  "started_utc": "2026-11-23T12:57:44+00:00",
+  "finished_utc": "2026-11-23T13:00:33+00:00",
+  "groups": {
+    "tools": {
+      "scenarios": [
+        {
+          "id": "t01-en-read",
+          "lang": "en",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Read the wiki file pages/server-setup.md for me.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/server-setup.md"
+                  }
+                }
+              ],
+              "latency_s": 0.62,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t02-en-search",
+          "lang": "en",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Search the wiki for the backup rotation policy.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "search",
+                  "args": {
+                    "query": "backup rotation policy"
+                  }
+                }
+              ],
+              "latency_s": 0.96,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t03-ru-read",
+          "lang": "ru",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Прочитай, пожалуйста, файл pages/server-setup.md.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/server-setup.md"
+                  }
+                }
+              ],
+              "latency_s": 0.97,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t04-cyrillic-args",
+          "lang": "ru",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Открой файл pages/резервные-копии.md — страницу про резервные копии.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/резервные-копии.md"
+                  }
+                }
+              ],
+              "latency_s": 0.63,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t05-exact-args",
+          "lang": "en",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Read exactly pages/db-migration-2026-11.md — mind the digits and dashes in the name.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/db-migration-2026-11.md"
+                  }
+                }
+              ],
+              "latency_s": 0.73,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t06-list",
+          "lang": "en",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "What files are in the pages/ directory of the wiki?",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "list_directory",
+                  "args": {
+                    "path": "pages/"
+                  }
+                }
+              ],
+              "latency_s": 0.58,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t07-no-tool",
+          "lang": "en",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "What is 2 + 2? Answer directly, no documents needed.",
+              "form": "none",
+              "calls": [],
+              "latency_s": 0.72,
+              "pass": true,
+              "reason": "no-tool expected"
+            }
+          ]
+        },
+        {
+          "id": "t08-ru-search-cyrillic",
+          "lang": "ru",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Найди в вики информацию о политике резервного копирования.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "search",
+                  "args": {
+                    "query": "политика резервного копирования"
+                  }
+                },
+                {
+                  "name": "search",
+                  "args": {
+                    "query": "backup policy"
+                  }
+                }
+              ],
+              "latency_s": 0.87,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t09-sequential",
+          "lang": "en",
+          "pass": false,
+          "turns": [
+            {
+              "prompt": "Read pages/index.md.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/index.md"
+                  }
+                }
+              ],
+              "latency_s": 0.6,
+              "pass": true,
+              "reason": ""
+            },
+            {
+              "prompt": "Thanks. Now read the backup page too.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "search",
+                  "args": {
+                    "query": "backup"
+                  }
+                },
+                {
+                  "name": "list_directory",
+                  "args": {
+                    "path": "/"
+                  }
+                }
+              ],
+              "latency_s": 1.15,
+              "pass": false,
+              "reason": "path lacks 'backup' in ['']"
+            }
+          ]
+        },
+        {
+          "id": "t10-parallel",
+          "lang": "en",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Read two files for me: pages/network-vlan.md and pages/onboarding.md.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/network-vlan.md"
+                  }
+                },
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/onboarding.md"
+                  }
+                }
+              ],
+              "latency_s": 0.77,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        }
+      ],
+      "score": 9,
+      "total": 10
+    },
+    "pipeline": {
+      "add_ok": true,
+      "add_latency_s": 86.05,
+      "add_log_excerpt": "pdate: disaster-recovery... 7.5s (in=2403, out=1227, cached=768)\n    update: data-retention... 12.9s (in=2584, out=1356, cached=1280)\n    summary-rewrite.... 4.4s (in=1801, out=702, cached=1536)\n  [OK] резервные-копии.md added to knowledge base.\n\n\nSummary: Added: 6, Skipped: 0, Failed: 0, Deleted: 0",
+      "queries": [
+        {
+          "q": "Какой порог тревоги по свободному месту на диске?",
+          "unanswerable": false,
+          "grounded": true,
+          "latency_s": 9.99,
+          "note": "cited: ['server-setup.md']",
+          "answer_excerpt": ". Выбор такого значения обычно основан на анализе скорости роста данных и необходимого времени на реакцию администратора ([[concepts/disk-monitoring]]).\n- **Связи с другими процессами:** диск-мониторинг предотвращает остановку сервисов из-за нехватки места и дополняет стратегию восстановления после сбоя ([[concepts/disaster-recovery]]) — резервное копирование защищает от потери данных, а мониторинг диска — от остановки из-за отсутствия места. Порог входит в стратегию планирования ёмкости, а изменение порогов — типовая задача, оформляемая через выдачу доступа ([[concepts/access-provisioning]])."
+        },
+        {
+          "q": "Сколько поколений бэкапов хранится?",
+          "unanswerable": false,
+          "grounded": true,
+          "latency_s": 11.66,
+          "note": "cited: ['backup-rotation.md', 'резервные-копии.md']",
+          "answer_excerpt": "ограничение в **2 поколения** — из суточных копий отбираются две последние, остальные удаляются.\n- Если бы бэкап выполнялся реже одного раза в 7 дней, первым сработал бы 14-дневный TTL — копии истекли бы раньше, чем накопилось бы второе поколение.\n\n### Связь с восстановлением\n\nКак отмечается в [[concepts/disaster-recovery]] и [[concepts/data-retention]]:\n- **2 поколения** определяют «глубину» отката — насколько далеко назад можно вернуться;\n- **14 дней** определяют «горизонт» восстановления — как долго копия вообще доступна;\n- ежедневный запуск в 02:00 задаёт максимальный RPO в пределах суток."
+        },
+        {
+          "q": "Когда запланирована миграция базы данных?",
+          "unanswerable": false,
+          "grounded": true,
+          "latency_s": 12.65,
+          "note": "cited: ['db-migration-2026-11.md']",
+          "answer_excerpt": " состоянию до миграции, если переход на новую платформу завершился неудачно.\n3. **Проверка целостности** — контроль сумм и выборочных запросов после переноса.\n4. **Коммуникация** — уведомление стейхолдеров о дате и ожидаемом простое.\n\nТакже [[concepts/data-retention]] указывает, что политики хранения определяют, какие данные необходимо переносить при миграции, а какие можно заранее архивировать или удалить — это стоит учесть при планировании объёма.\n\n**Итог:** зафиксированная дата — **2026-11-30**; остальные параметры миграции в базе знаний отсутствуют и требуют уточнения в смежных документах."
+        },
+        {
+          "q": "Какой VLAN является серверным?",
+          "unanswerable": false,
+          "grounded": true,
+          "latency_s": 10.55,
+          "note": "cited: ['network-vlan.md']",
+          "answer_excerpt": "ля серверов позволяет:\n\n1. изолировать серверный трафик от рабочих станций;\n2. применять к нему единые правила фильтрации и мониторинга;\n3. упрощать аудит и управление доступом;\n4. удерживать широковещательный трафик в границах своего VLAN, снижая нагрузку на сеть.\n\nПри этом сама по себе VLAN-сегментация не обеспечивает полноценной безопасности — для контроля межсегментного трафика требуются ACL, зональная фильтрация или файрволы.\n\nИсточник также отмечает, что документ краток: дополнительные сведения о коммутаторах, правилах маршрутизации и интервалах tagged/untagged трафика в нём отсутствуют."
+        },
+        {
+          "q": "Как новый сотрудник получает доступ?",
+          "unanswerable": false,
+          "grounded": true,
+          "latency_s": 12.2,
+          "note": "cited: ['onboarding.md']",
+          "answer_excerpt": "\n4. **Ценность ITSM-канала.** Использование формального канала делает выдачу доступа воспроизводимой, аудируемой и масштабируемой, отделяя ИТ-операции от ручных согласований. К журналам и записям заявок ITSM применяются также правила хранения данных из [[concepts/data-retention]].\n\n### Что не уточнено в источнике\n\nИсходный документ крайне краток — описан только канал выдачи доступа. В базе **нет информации** о:\n\n- сроках обработки заявки,\n- категориях и ролях доступа,\n- согласующих лицах,\n- шагах процесса до и после подачи тикета.\n\nЕсли нужны эти детали, в имеющихся материалах их найти нельзя."
+        },
+        {
+          "q": "Какой пароль у роутера в серверной?",
+          "unanswerable": true,
+          "grounded": true,
+          "latency_s": 11.87,
+          "note": "",
+          "answer_excerpt": "I could not find information about this in the knowledge base.\n\nВ базе нет сведений о пароле роутера в серверной: ни полнотекстовый поиск по запросам «пароль роутер серверная» / «password», ни обзор каталога (index.md) не содержат упоминаний роутера или его учётных данных. Ближайшее, что есть по теме серверной сети, — это сведения о серверном VLAN 100 (подсеть 192.168.100.0/24, сервер мониторинга 192.168.100.109), но параметры сетевого оборудования в документах отсутствуют."
+        }
+      ],
+      "score": 6,
+      "total": 6
+    }
+  }
+}
