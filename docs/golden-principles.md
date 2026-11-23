@@ -5,6 +5,19 @@ and consistent for future agent runs. Enforced by CI where possible; the rest
 are honored by convention and checked in review. When a rule proves valuable,
 promote it into a lint (see `tests/test_file_size.py` for the pattern).
 
+## Data hygiene (secrets & personal infra) — hard rule (#77)
+Real IPs, DNS names, hostnames, logins, passwords, tokens and any
+infrastructure identifiers must NEVER land in this repo (it is public).
+Every example/fixture/doc value that looks like infrastructure comes from
+approved fake pools instead — and must not be a calque of real infra:
+- LAN addresses: random addresses from `192.168.0.0/24`
+- DNS examples: public resolvers (`8.8.8.8`, `1.1.1.1`)
+- person names: mixes of footballers / Harry Potter characters
+- site addresses: fictional domains (`noname099.xyz`, `denegv2030.net`)
+Bench report output masks LAN endpoints automatically
+(`benchmarks.model_suite.mask_endpoint`). Examples in tests must use pool
+values too.
+
 ## Boundaries
 - **Validate data shapes at boundaries.** Parse/validate inputs (frontmatter via
   `openkb/frontmatter.py`, config via `openkb/config.py`) at the edge. Never build

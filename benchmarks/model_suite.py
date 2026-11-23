@@ -791,6 +791,12 @@ def run_pipeline_group(
     }
 
 
+def mask_endpoint(url: str) -> str:
+    """Mask personal infra endpoints — repo rule (#77): any LAN address in
+    output is rewritten to the approved placeholder pool value."""
+    return re.sub(r"192\.168\.\d+\.\d+", "192.168.0.203", url)
+
+
 def harness_sha() -> str:
     try:
         proc = subprocess.run(
@@ -914,7 +920,7 @@ def main() -> None:
         "label": label,
         "model": args.model,
         "provider": args.provider,
-        "api_base": args.api_base,
+        "api_base": mask_endpoint(args.api_base),
         "ctx": args.ctx,
         "harness_sha": harness_sha(),
         "started_utc": started,
