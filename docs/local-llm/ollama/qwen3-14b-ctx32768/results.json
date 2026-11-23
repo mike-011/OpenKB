@@ -1,0 +1,834 @@
+{
+  "label": "qwen3-14b-ctx32768",
+  "model": "qwen3:14b",
+  "provider": "ollama_chat",
+  "api_base": "http://192.168.0.203:11434",
+  "ctx": 32768,
+  "harness_sha": "a79a414",
+  "started_utc": "2026-11-23T18:17:02+00:00",
+  "finished_utc": "2026-11-23T20:15:20+00:00",
+  "groups": {
+    "tools": {
+      "scenarios": [
+        {
+          "id": "t01-en-read",
+          "lang": "en",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Read the wiki file pages/server-setup.md for me.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/server-setup.md"
+                  }
+                }
+              ],
+              "latency_s": 29.93,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t02-en-search",
+          "lang": "en",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Search the wiki for the backup rotation policy.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "search",
+                  "args": {
+                    "query": "backup rotation policy"
+                  }
+                }
+              ],
+              "latency_s": 10.13,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t03-ru-read",
+          "lang": "ru",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Прочитай, пожалуйста, файл pages/server-setup.md.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/server-setup.md"
+                  }
+                }
+              ],
+              "latency_s": 15.22,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t04-cyrillic-args",
+          "lang": "ru",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Открой файл pages/резервные-копии.md — страницу про резервные копии.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/резервные-копии.md"
+                  }
+                }
+              ],
+              "latency_s": 26.06,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t05-exact-args",
+          "lang": "en",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Read exactly pages/db-migration-2026-11.md — mind the digits and dashes in the name.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/db-migration-2026-11.md"
+                  }
+                }
+              ],
+              "latency_s": 20.71,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t06-list",
+          "lang": "en",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "What files are in the pages/ directory of the wiki?",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "list_directory",
+                  "args": {
+                    "path": "pages/"
+                  }
+                }
+              ],
+              "latency_s": 17.09,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t07-no-tool",
+          "lang": "en",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "What is 2 + 2? Answer directly, no documents needed.",
+              "form": "none",
+              "calls": [],
+              "latency_s": 30.82,
+              "pass": true,
+              "reason": "no-tool expected"
+            }
+          ]
+        },
+        {
+          "id": "t08-ru-search-cyrillic",
+          "lang": "ru",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Найди в вики информацию о политике резервного копирования.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "search",
+                  "args": {
+                    "query": "политика резервного копирования"
+                  }
+                }
+              ],
+              "latency_s": 102.05,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t09-sequential",
+          "lang": "en",
+          "pass": false,
+          "turns": [
+            {
+              "prompt": "Read pages/index.md.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/index.md"
+                  }
+                }
+              ],
+              "latency_s": 16.54,
+              "pass": true,
+              "reason": ""
+            },
+            {
+              "prompt": "Thanks. Now read the backup page too.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "list_directory",
+                  "args": {
+                    "path": "pages"
+                  }
+                }
+              ],
+              "latency_s": 30.15,
+              "pass": false,
+              "reason": "path lacks 'backup' in ['']"
+            }
+          ]
+        },
+        {
+          "id": "t10-parallel",
+          "lang": "en",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Read two files for me: pages/network-vlan.md and pages/onboarding.md.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/network-vlan.md"
+                  }
+                },
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/onboarding.md"
+                  }
+                }
+              ],
+              "latency_s": 29.14,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t11-uk-read",
+          "lang": "uk",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Прочитай, будь ласка, файл pages/server-setup.md.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/server-setup.md"
+                  }
+                }
+              ],
+              "latency_s": 13.06,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t12-pl-read-diacritics",
+          "lang": "pl",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Przeczytaj proszę plik pages/db-migration-2026-11.md — zwróć uwagę na cyfry i myślniki w nazwie.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "read_file",
+                  "args": {
+                    "path": "pages/db-migration-2026-11.md"
+                  }
+                }
+              ],
+              "latency_s": 20.46,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t13-uk-search",
+          "lang": "uk",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Пошукай у вікі інформацію про резервні копії.",
+              "form": "structured",
+              "calls": [
+                {
+                  "name": "search",
+                  "args": {
+                    "query": "резервні копії"
+                  }
+                }
+              ],
+              "latency_s": 18.7,
+              "pass": true,
+              "reason": ""
+            }
+          ]
+        },
+        {
+          "id": "t14-pl-no-tool",
+          "lang": "pl",
+          "pass": true,
+          "turns": [
+            {
+              "prompt": "Jaka jest dziś pogoda w Katowicach? Odpowiedz bezpośrednio, dokumenty nie są potrzebne.",
+              "form": "none",
+              "calls": [],
+              "latency_s": 23.58,
+              "pass": true,
+              "reason": "no-tool expected"
+            }
+          ]
+        }
+      ],
+      "score": 13,
+      "total": 14
+    },
+    "pipeline": {
+      "add_ok": true,
+      "add_latency_s": 3125.72,
+      "add_log_excerpt": "\n    summary-rewrite............................................. 45.5s (in=1355, out=339)\n  [OK] резервные-копии.md added to knowledge base.\n\n\nSummary: Added: 7, Skipped: 0, Failed: 1, Deleted: 0\nopenkb.agent.compiler WARNING: Concept generation failed: LLM returned empty content for concept 'itsm'",
+      "queries": [
+        {
+          "q": "What is the free disk space alarm threshold?",
+          "lang": "en",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 107.0,
+          "note": "cited: ['server-setup.md']",
+          "answer_excerpt": "The free disk space alarm threshold is set to **15 GiB of available space**. This value is specified in both the [[concepts/disk-alarm-threshold]] concept page and the [[summaries/server-setup]] summary page. When free space falls below this threshold, the system triggers warnings to alert administrators of potential storage issues."
+        },
+        {
+          "q": "How many backup generations are kept?",
+          "lang": "en",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 135.51,
+          "note": "cited: ['backup-rotation.md']",
+          "answer_excerpt": "ed in the [[summaries/backup-rotation]] document. This policy also includes a 14-day expiration period for these generations.\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 1/3: model answered without calling any tools, nudging\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 2/3: model answered without calling any tools, nudging\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 3/3: model answered without calling any tools, nudging\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called: retries exhausted (3), returning ungrounded answer"
+        },
+        {
+          "q": "When is the database migration scheduled?",
+          "lang": "en",
+          "unanswerable": false,
+          "grounded": false,
+          "correct": true,
+          "pass": false,
+          "latency_s": 93.81,
+          "note": "no expected page cited",
+          "answer_excerpt": "The database migration is scheduled for **November 30, 2026** [[concepts/database-migration]].\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 1/3: model answered without calling any tools, nudging"
+        },
+        {
+          "q": "Which VLAN is the server VLAN?",
+          "lang": "en",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 115.65,
+          "note": "cited: ['network-vlan.md']",
+          "answer_excerpt": "The server VLAN is **VLAN 100**, as explicitly stated in the network configuration documentation [[summaries/network-vlan]]. This VLAN is specifically designated for server traffic segmentation and plays a critical role in network architecture by isolating server communications [[concepts/network-segmentation]]. The entity page for [[entities/vlan-100]] further confirms this designation.\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 1/3: model answered without calling any tools, nudging"
+        },
+        {
+          "q": "How does a new employee get access?",
+          "lang": "en",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 108.12,
+          "note": "cited: ['onboarding.md']",
+          "answer_excerpt": "The onboarding process for new employees is managed through the creation of an **ITSM ticket**. This involves submitting a formal request via the ITSM system, which triggers the necessary steps to grant access to IT resources and integrate the employee into the company's infrastructure. The exact workflows and permissions are handled internally by the ITSM process, ensuring standardized and secure access provisioning. \n\nFor further details, the full onboarding documentation is available in the source file: [sources/onboarding.md](sources/onboarding.md)."
+        },
+        {
+          "q": "What is the router password in the server room?",
+          "lang": "en",
+          "unanswerable": true,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 181.29,
+          "note": "",
+          "answer_excerpt": "I could not find information about this in the knowledge base.\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 1/3: model answered without calling any tools, nudging\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 2/3: model answered without calling any tools, nudging\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 3/3: model answered without calling any tools, nudging"
+        },
+        {
+          "q": "Какой порог тревоги по свободному месту на диске?",
+          "lang": "ru",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 74.44,
+          "note": "cited: ['server-setup.md']",
+          "answer_excerpt": "Порог оповещения о свободном месте на диске установлен на **15 GiB**. Это значение указано в документе [[summaries/server-setup]] и связано с концептом [[concepts/disk-alarm-threshold]], который описывает пороговое значение для активации предупреждений."
+        },
+        {
+          "q": "Сколько поколений бэкапов хранится?",
+          "lang": "ru",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 190.75,
+          "note": "cited: ['backup-rotation.md']",
+          "answer_excerpt": "документа: *\"Backup rotation policy: 2 generations retained, 14-day expiration.\"* \n\nДополнительно в сводке поясняется, что сохранение двух поколений обеспечивает баланс между хранением исторических данных и управлением объемом хранилища.\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 1/3: model answered without calling any tools, nudging\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 2/3: model answered without calling any tools, nudging\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 3/3: model answered without calling any tools, nudging"
+        },
+        {
+          "q": "Когда запланирована миграция базы данных?",
+          "lang": "ru",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 91.71,
+          "note": "cited: ['db-migration-2026-11.md']",
+          "answer_excerpt": "Миграция базы данных запланирована на **30 ноября 2026 года**, как указано в [[summaries/db-migration-2026-11]].\n\nЭто событие связано с переходом на новую версию системы и обеспечением целостности данных. Дополнительные детали о процессе миграции можно найти в исходном документе [[sources/db-migration-2026-11.md]], но ключевая дата указана прямо в кратком описании."
+        },
+        {
+          "q": "Какой VLAN является серверным?",
+          "lang": "ru",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 134.31,
+          "note": "cited: ['network-vlan.md']",
+          "answer_excerpt": "VLAN 100 является серверным VLAN. Это указано в документе [[summaries/network-vlan]], где говорится, что VLAN 100 предназначен для серверов и используется для сегментации сетевого трафика [[concepts/network-segmentation]]. Данный VLAN играет ключевую роль в изоляции серверной коммуникации в рамках общей архитектуры сети [[concepts/network-architecture]]. \n\nДополнительная информация о VLAN 100 также доступна в странице сущности [[entities/vlan-100]].\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 1/3: model answered without calling any tools, nudging"
+        },
+        {
+          "q": "Как новый сотрудник получает доступ?",
+          "lang": "ru",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 101.13,
+          "note": "cited: ['onboarding.md']",
+          "answer_excerpt": "Новый сотрудник получает доступ через процесс наboarding, который реализуется с использованием ITSM-заявок. Согласно [[summaries/onboarding]], ключевым элементом является создание ITSM-заявки, которая обеспечивает управление доступом и интеграцию сотрудника в IT-инфраструктуру. Дополнительные детали о процедуре создания заявки или взаимодействии с ITSM-системой в текущем знанийном базе не указаны."
+        },
+        {
+          "q": "Какой пароль у роутера в серверной?",
+          "lang": "ru",
+          "unanswerable": true,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 69.58,
+          "note": "",
+          "answer_excerpt": "I could not find information about this in the knowledge base. The available documentation does not contain any details about router passwords or network device credentials. For security reasons, such information would typically be managed through IT administrative channels rather than documented in knowledge base materials."
+        },
+        {
+          "q": "Який поріг тривоги за вільним місцем на диску?",
+          "lang": "uk",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 181.57,
+          "note": "cited: ['server-setup.md']",
+          "answer_excerpt": "Поріг тривоги за вільним місцем на диску встановлено на **15 GiB** свободного простору. Це зазначено в документі [[summaries/server-setup]] (Настройки сервера мониторинга и порог оповещения о диске).\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 1/3: model answered without calling any tools, nudging\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 2/3: model answered without calling any tools, nudging\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 3/3: model answered without calling any tools, nudging"
+        },
+        {
+          "q": "Скільки поколінь резервних копій зберігається?",
+          "lang": "uk",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 101.25,
+          "note": "cited: ['backup-rotation.md']",
+          "answer_excerpt": "В рамках политики ротации резервных копий сохраняется **2 поколения** данных. Это указано прямо в описании документа [[summaries/backup-rotation]] и подтверждается в ключевых аспектах. Через 14 дней резервные копии автоматически удаляются, что обеспечивает баланс между хранением исторических данных и управлением объемом хранилища.\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 1/3: model answered without calling any tools, nudging"
+        },
+        {
+          "q": "Коли запланована міграція бази даних?",
+          "lang": "uk",
+          "unanswerable": false,
+          "grounded": false,
+          "correct": true,
+          "pass": false,
+          "latency_s": 93.09,
+          "note": "no expected page cited",
+          "answer_excerpt": "Міграція бази даних запланована на **30 листопада 2026 року** [[concepts/database-migration]]. Це ключовий етап модернізації системи, який забезпечує цілісність даних під час переходу на нову версію. \n\nПолітика збереження даних ([[concepts/data-retention-policies]]) може впливати на час міграції, але точні деталі процесу не наведені в доступних матеріалах."
+        },
+        {
+          "q": "Який VLAN є серверним?",
+          "lang": "uk",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 78.0,
+          "note": "cited: ['network-vlan.md']",
+          "answer_excerpt": "Серверним VLAN є VLAN 100. Це вказано у документі [[summaries/network-vlan]], де зазначено, що VLAN 100 призначений для сегментації мережевого трафіку. Цей VLAN відіграє критичну роль у ізоляції комунікації серверів у мережевій інфраструктурі [[concepts/network-architecture]]. \n\nДодаткові деталі про VLAN 100 можна знайти на сторінці [[entities/vlan-100]]."
+        },
+        {
+          "q": "Як новий співробітник отримує доступ?",
+          "lang": "uk",
+          "unanswerable": false,
+          "grounded": false,
+          "correct": true,
+          "pass": false,
+          "latency_s": 208.18,
+          "note": "no expected page cited",
+          "answer_excerpt": "Новий співробітник отримує доступ через процес наboarding, який здійснюється шляхом створення ITSM-заявки. Цей процес включає використання [[concepts/itsm]] для управління доступом та інтеграції співробітника в IT-інфраструктуру. Основним етапом є створення заявки в системі ITSM, яка ініціює надання необхідних прав і доступу до ресурсів. \n\nДокладніше про механізм ITSM та його роль у процесі наboarding можна знайти в концепції [[concepts/itsm]]."
+        },
+        {
+          "q": "Коли проводиться планове технічне обслуговування сервера?",
+          "lang": "uk",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 243.01,
+          "note": "cited: ['обслуговування-сервера.md']",
+          "answer_excerpt": "абезпечує стабільність роботи системи та мінімізує ризики виникнення технічних неполадок, як зазначено в [[summaries/обслуговування-сервера]]. \n\nДодатково, цей розклад обслуговування пов’язаний з загальною концепцією планового обслуговування, яка охоплює не тільки сервери, але й інші аспекти підтримки систем [[concepts/planovoe-tehnichnoe-obsluzhuvannia]].\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 1/3: model answered without calling any tools, nudging\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 2/3: model answered without calling any tools, nudging"
+        },
+        {
+          "q": "Який пароль від роутера в серверній?",
+          "lang": "uk",
+          "unanswerable": true,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 211.11,
+          "note": "",
+          "answer_excerpt": "I could not find information about this in the knowledge base.\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 1/3: model answered without calling any tools, nudging\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 2/3: model answered without calling any tools, nudging\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 3/3: model answered without calling any tools, nudging"
+        },
+        {
+          "q": "Jaki jest próg alarmowy wolnego miejsca na dysku?",
+          "lang": "pl",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 78.4,
+          "note": "cited: ['server-setup.md']",
+          "answer_excerpt": "Порог оповещения о диске установлен на **15 GiB свободного пространства**. Когда уровень свободного места на диске падает до этого значения, система генерирует предупреждения, чтобы оперативно реагировать на возможные проблемы с хранением данных. Этот параметр указан в документе [[summaries/server-setup]], который описывает настройки сервера и пороги оповещения."
+        },
+        {
+          "q": "Ile pokoleń kopii zapasowych jest przechowywanych?",
+          "lang": "pl",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 178.44,
+          "note": "cited: ['backup-rotation.md']",
+          "answer_excerpt": "едних набора резервных копий, после чего более старшие версии автоматически удаляются. Срок хранения каждой копии составляет 14 дней, что обеспечивает баланс между сохранением исторических данных и управлением объемом хранилища. \n\nДанная политика связана с общими [[concepts/data-retention-policies]] и помогает соблюдать требования к резервному копированию.\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 1/3: model answered without calling any tools, nudging\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 2/3: model answered without calling any tools, nudging"
+        },
+        {
+          "q": "Kiedy zaplanowana jest migracja bazy danych?",
+          "lang": "pl",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 158.93,
+          "note": "cited: ['db-migration-2026-11.md']",
+          "answer_excerpt": "Миграция базы данных запланирована на **30 ноября 2026 года**. Эта дата указана в кратком описании документа [[summaries/db-migration-2026-11]] и подтверждается ссылкой на концепт [[concepts/database-migration]], который описывает процесс обновления базы данных.\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 1/3: model answered without calling any tools, nudging"
+        },
+        {
+          "q": "Który VLAN jest serwerowy?",
+          "lang": "pl",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 207.95,
+          "note": "cited: ['network-vlan.md']",
+          "answer_excerpt": "]], где говорится, что VLAN 100 предназначен для сегментации сетевого трафика и критически важен для изоляции серверной коммуникации в инфраструктуре сети. Дополнительные сведения о VLAN 100 можно найти на странице [[entities/vlan-100]].\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 1/3: model answered without calling any tools, nudging\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 2/3: model answered without calling any tools, nudging\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 3/3: model answered without calling any tools, nudging"
+        },
+        {
+          "q": "Jak nowy pracownik uzyskuje dostęp?",
+          "lang": "pl",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 94.65,
+          "note": "cited: ['onboarding.md']",
+          "answer_excerpt": "Новый сотрудник получает доступ через процесс наboarding, который реализуется с использованием ITSM-заявок. Согласно [[summaries/onboarding]], ключевым элементом является создание ITSM-заявки для управления доступом и интеграции сотрудника в IT-инфраструктуру. Дополнительные технические детали о процедуре не указаны в доступных материалах."
+        },
+        {
+          "q": "Kiedy odbywa się konserwacja zapasowa?",
+          "lang": "pl",
+          "unanswerable": false,
+          "grounded": true,
+          "correct": false,
+          "pass": false,
+          "latency_s": 158.14,
+          "note": "cited: ['harmonogram-konserwacji.md'] | facts missing: ['pl-konserwacja-sat-0300']",
+          "answer_excerpt": "Консервация запасной копии (backup maintenance) выполняется **еженедельно в субботы в 03:00 по времени Варшавы**, как указано в документе [[summaries/harmonogram-konserwacji]].\n\nДополнительно в концепции [[concepts/backup-maintenance-schedule]] упоминается ежедневная резервная копия в 02:00, но это, вероятно, относится к другому типу резервного копирования (основной график), а не к запасной консервации."
+        },
+        {
+          "q": "Jakie jest hasło do routera w serwerowni?",
+          "lang": "pl",
+          "unanswerable": true,
+          "grounded": true,
+          "correct": true,
+          "pass": true,
+          "latency_s": 166.48,
+          "note": "",
+          "answer_excerpt": "I could not find information about this in the knowledge base.\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 1/3: model answered without calling any tools, nudging\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 2/3: model answered without calling any tools, nudging\nopenkb.agent.ollama_adapter WARNING: Ollama no-tools-called retry 3/3: model answered without calling any tools, nudging"
+        }
+      ],
+      "score": 22,
+      "total": 26,
+      "context_recall": {
+        "facts": [
+          {
+            "id": "ip-monitor",
+            "src": "server-setup.md",
+            "retained": false,
+            "found_in": []
+          },
+          {
+            "id": "disk-15",
+            "src": "server-setup.md",
+            "retained": true,
+            "found_in": [
+              "wiki/concepts/disk-alarm-threshold.md",
+              "wiki/sources/server-setup.md",
+              "wiki/summaries/server-setup.md"
+            ]
+          },
+          {
+            "id": "backup-2-gen",
+            "src": "backup-rotation.md",
+            "retained": true,
+            "found_in": [
+              "wiki/concepts/data-retention-policies.md",
+              "wiki/sources/backup-rotation.md",
+              "wiki/summaries/backup-rotation.md"
+            ]
+          },
+          {
+            "id": "backup-14-days",
+            "src": "backup-rotation.md",
+            "retained": true,
+            "found_in": [
+              "wiki/concepts/backup-rotation.md",
+              "wiki/concepts/data-retention-policies.md",
+              "wiki/sources/backup-rotation.md",
+              "wiki/summaries/backup-rotation.md"
+            ]
+          },
+          {
+            "id": "backup-0200-warsaw",
+            "src": "резервные-копии.md",
+            "retained": true,
+            "found_in": [
+              "wiki/concepts/backup-maintenance-schedule.md",
+              "wiki/sources/резервные-копии.md",
+              "wiki/summaries/резервные-копии.md"
+            ]
+          },
+          {
+            "id": "migration-2026-11-30",
+            "src": "db-migration-2026-11.md",
+            "retained": true,
+            "found_in": [
+              "wiki/concepts/database-migration.md",
+              "wiki/sources/db-migration-2026-11.md",
+              "wiki/summaries/db-migration-2026-11.md"
+            ]
+          },
+          {
+            "id": "vlan-100",
+            "src": "network-vlan.md",
+            "retained": true,
+            "found_in": [
+              "wiki/concepts/network-architecture.md",
+              "wiki/concepts/network-segmentation.md",
+              "wiki/entities/vlan-100.md",
+              "wiki/sources/network-vlan.md",
+              "wiki/summaries/network-vlan.md"
+            ]
+          },
+          {
+            "id": "onboarding-itsm",
+            "src": "onboarding.md",
+            "retained": true,
+            "found_in": [
+              "wiki/sources/onboarding.md",
+              "wiki/summaries/onboarding.md"
+            ]
+          },
+          {
+            "id": "uk-service-friday-2300",
+            "src": "обслуговування-сервера.md",
+            "retained": true,
+            "found_in": [
+              "wiki/concepts/planovoe-tehnichnoe-obsluzhuvannia.md",
+              "wiki/sources/обслуговування-сервера.md",
+              "wiki/summaries/обслуговування-сервера.md"
+            ]
+          },
+          {
+            "id": "pl-konserwacja-sat-0300",
+            "src": "harmonogram-konserwacji.md",
+            "retained": true,
+            "found_in": [
+              "wiki/sources/harmonogram-konserwacji.md",
+              "wiki/summaries/harmonogram-konserwacji.md"
+            ]
+          }
+        ],
+        "score": 9,
+        "total": 10
+      }
+    },
+    "context_recall": {
+      "facts": [
+        {
+          "id": "ip-monitor",
+          "src": "server-setup.md",
+          "retained": false,
+          "found_in": []
+        },
+        {
+          "id": "disk-15",
+          "src": "server-setup.md",
+          "retained": true,
+          "found_in": [
+            "wiki/concepts/disk-alarm-threshold.md",
+            "wiki/sources/server-setup.md",
+            "wiki/summaries/server-setup.md"
+          ]
+        },
+        {
+          "id": "backup-2-gen",
+          "src": "backup-rotation.md",
+          "retained": true,
+          "found_in": [
+            "wiki/concepts/data-retention-policies.md",
+            "wiki/sources/backup-rotation.md",
+            "wiki/summaries/backup-rotation.md"
+          ]
+        },
+        {
+          "id": "backup-14-days",
+          "src": "backup-rotation.md",
+          "retained": true,
+          "found_in": [
+            "wiki/concepts/backup-rotation.md",
+            "wiki/concepts/data-retention-policies.md",
+            "wiki/sources/backup-rotation.md",
+            "wiki/summaries/backup-rotation.md"
+          ]
+        },
+        {
+          "id": "backup-0200-warsaw",
+          "src": "резервные-копии.md",
+          "retained": true,
+          "found_in": [
+            "wiki/concepts/backup-maintenance-schedule.md",
+            "wiki/sources/резервные-копии.md",
+            "wiki/summaries/резервные-копии.md"
+          ]
+        },
+        {
+          "id": "migration-2026-11-30",
+          "src": "db-migration-2026-11.md",
+          "retained": true,
+          "found_in": [
+            "wiki/concepts/database-migration.md",
+            "wiki/sources/db-migration-2026-11.md",
+            "wiki/summaries/db-migration-2026-11.md"
+          ]
+        },
+        {
+          "id": "vlan-100",
+          "src": "network-vlan.md",
+          "retained": true,
+          "found_in": [
+            "wiki/concepts/network-architecture.md",
+            "wiki/concepts/network-segmentation.md",
+            "wiki/entities/vlan-100.md",
+            "wiki/sources/network-vlan.md",
+            "wiki/summaries/network-vlan.md"
+          ]
+        },
+        {
+          "id": "onboarding-itsm",
+          "src": "onboarding.md",
+          "retained": true,
+          "found_in": [
+            "wiki/sources/onboarding.md",
+            "wiki/summaries/onboarding.md"
+          ]
+        },
+        {
+          "id": "uk-service-friday-2300",
+          "src": "обслуговування-сервера.md",
+          "retained": true,
+          "found_in": [
+            "wiki/concepts/planovoe-tehnichnoe-obsluzhuvannia.md",
+            "wiki/sources/обслуговування-сервера.md",
+            "wiki/summaries/обслуговування-сервера.md"
+          ]
+        },
+        {
+          "id": "pl-konserwacja-sat-0300",
+          "src": "harmonogram-konserwacji.md",
+          "retained": true,
+          "found_in": [
+            "wiki/sources/harmonogram-konserwacji.md",
+            "wiki/summaries/harmonogram-konserwacji.md"
+          ]
+        }
+      ],
+      "score": 9,
+      "total": 10
+    }
+  }
+}
