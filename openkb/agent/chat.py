@@ -972,7 +972,9 @@ async def run_chat(
     config = resolve_effective_config(kb_dir)[0]
     language = session.language or config.get("language", "en")
     generation_params: dict | None = config.get("generation") or None
-    agent = build_chat_agent(kb_dir, session.model, language=language, generation_params=generation_params)
+    agent = build_chat_agent(
+        kb_dir, session.model, language=language, generation_params=generation_params
+    )
 
     _print_header(session, kb_dir, style)
     if session.turn_count > 0:
@@ -1012,7 +1014,9 @@ async def run_chat(
                 return
             if action == "new_session":
                 session = ChatSession.new(kb_dir, session.model, session.language)
-                agent = build_chat_agent(kb_dir, session.model, language=language, generation_params=generation_params)
+                agent = build_chat_agent(
+                    kb_dir, session.model, language=language, generation_params=generation_params
+                )
                 prompt_session = _make_prompt_session(session, style, use_color, kb_dir)
             continue
 

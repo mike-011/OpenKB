@@ -15,7 +15,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
-from starlette.staticfiles import StaticFiles
 
 from openkb.agent.chat import build_chat_session_agent, iter_chat_turn_events
 from openkb.agent.chat_session import ChatSession, load_session
@@ -97,7 +96,23 @@ def _mount_web_ui(app: FastAPI) -> None:
     """
     web_dir = Path(__file__).resolve().parent / "web"
     if web_dir.is_dir():
-        app.mount("/", StaticFiles(directory=str(web_dir), html=True), name="web-ui")
+        from starlette.staticfiles import StaticFiles as _StaticFilesBase
+
+        class _SpaStaticFiles(_StaticFilesBase):
+            """StaticFiles with SPA fallback: unknown paths serve index.html.
+
+            Plain StaticFiles(html=True) 404s unknown deep links (#57); the
+            Studio is a single-page app and must answer with index.html so
+            refresh/deep links work.
+            """
+
+            def lookup_path(self, path: str) -> tuple[str, Any]:
+                found = super().lookup_path(path)
+                if found[0]:
+                    return found
+                return super().lookup_path("index.html")
+
+        app.mount("/", _SpaStaticFiles(directory=str(web_dir), html=True), name="web-ui")
 
 
 def require_bearer_token(
