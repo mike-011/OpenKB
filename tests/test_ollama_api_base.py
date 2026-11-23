@@ -38,7 +38,7 @@ class TestLlmCallApiBase:
         monkeypatch.setenv("OPENAI_API_BASE", "http://ollama-env:11434")
         monkeypatch.delenv("OLLAMA_API_BASE", raising=False)
         with patch("openkb.agent.compiler.litellm") as mock_litellm:
-            mock_litellm.completion = MagicMock(return_value=_fake_response())
+            mock_litellm.completion = MagicMock(return_value=[_fake_response()])
             out = _llm_call("ollama_chat/gemma4:12b", MESSAGES, "summary")
 
         assert out == "ok"
@@ -51,7 +51,7 @@ class TestLlmCallApiBase:
         monkeypatch.delenv("OPENAI_API_BASE", raising=False)
         monkeypatch.setenv("OLLAMA_API_BASE", "http://ollama-only:11434")
         with patch("openkb.agent.compiler.litellm") as mock_litellm:
-            mock_litellm.completion = MagicMock(return_value=_fake_response())
+            mock_litellm.completion = MagicMock(return_value=[_fake_response()])
             _llm_call("ollama_chat/gemma4:12b", MESSAGES, "summary")
 
         kwargs = mock_litellm.completion.call_args.kwargs
@@ -63,7 +63,7 @@ class TestLlmCallApiBase:
         monkeypatch.delenv("OPENAI_API_BASE", raising=False)
         monkeypatch.delenv("OLLAMA_API_BASE", raising=False)
         with patch("openkb.agent.compiler.litellm") as mock_litellm:
-            mock_litellm.completion = MagicMock(return_value=_fake_response())
+            mock_litellm.completion = MagicMock(return_value=[_fake_response()])
             _llm_call("ollama_chat/gemma4:12b", MESSAGES, "summary")
 
         assert "api_base" not in mock_litellm.completion.call_args.kwargs
@@ -73,7 +73,7 @@ class TestLlmCallApiBase:
 
         monkeypatch.setenv("OPENAI_API_BASE", "http://env:1")
         with patch("openkb.agent.compiler.litellm") as mock_litellm:
-            mock_litellm.completion = MagicMock(return_value=_fake_response())
+            mock_litellm.completion = MagicMock(return_value=[_fake_response()])
             _llm_call("ollama_chat/gemma4:12b", MESSAGES, "summary", api_base="http://explicit:2")
 
         kwargs = mock_litellm.completion.call_args.kwargs
@@ -89,7 +89,7 @@ class TestLlmCallApiBase:
         bundle.extra_headers = {}
         bundle.timeout = None
         with patch("openkb.agent.compiler.litellm") as mock_litellm:
-            mock_litellm.completion = MagicMock(return_value=_fake_response())
+            mock_litellm.completion = MagicMock(return_value=[_fake_response()])
             _llm_call("ollama_chat/gemma4:12b", MESSAGES, "summary", bundle=bundle)
 
         kwargs = mock_litellm.completion.call_args.kwargs
@@ -104,7 +104,7 @@ class TestLlmCallApiBase:
         monkeypatch.setenv("OPENAI_API_BASE", "http://ollama-env:11434")
         monkeypatch.delenv("OLLAMA_API_BASE", raising=False)
         with patch("openkb.agent.compiler.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=_fake_response())
+            mock_litellm.acompletion = AsyncMock(return_value=[_fake_response()])
             out = await _llm_call_async("ollama_chat/gemma4:12b", MESSAGES, "summary")
 
         assert out == "ok"
@@ -122,7 +122,7 @@ class TestLlmCallApiBase:
         bundle.extra_headers = {}
         bundle.timeout = None
         with patch("openkb.agent.compiler.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=_fake_response())
+            mock_litellm.acompletion = AsyncMock(return_value=[_fake_response()])
             await _llm_call_async("ollama_chat/gemma4:12b", MESSAGES, "summary", bundle=bundle)
 
         kwargs = mock_litellm.acompletion.call_args.kwargs
