@@ -358,25 +358,8 @@ async def _run_turn(
 
     print()
     collected: list[str] = []
-    segment: list[str] = []
     last_was_text = False
     need_blank_before_text = False
-
-    if use_color and not raw:
-        from rich.live import Live
-
-        console = _make_rich_console()
-    else:
-        console = None  # type: ignore[assignment]
-
-    def _start_live() -> Any:
-        if console is None:
-            return None
-        lv = Live(console=console, vertical_overflow="visible")
-        lv.start()
-        return lv
-
-    live = _start_live()
 
     try:
         async for event in result.stream_events():
@@ -385,51 +368,25 @@ async def _run_turn(
                     text = event.data.delta
                     if text:
                         if need_blank_before_text:
-                            if console is not None:
-                                print()
-                                segment = []
-                                live = _start_live()
-                            else:
-                                sys.stdout.write("\n")
+                            sys.stdout.write("\n")
                             need_blank_before_text = False
                         collected.append(text)
-                        segment.append(text)
                         last_was_text = True
-                        if live:
-                            if "\n" in text:
-                                joined = "".join(segment)
-                                visible = joined[: joined.rfind("\n") + 1]
-                                if visible:
-                                    live.update(_make_markdown(visible))
-                        else:
-                            sys.stdout.write(text)
-                            sys.stdout.flush()
+                        sys.stdout.write(text)
+                        sys.stdout.flush()
             elif isinstance(event, RunItemStreamEvent):
                 item = event.item
                 if item.type == "tool_call_item":
                     if last_was_text:
-                        if live:
-                            if segment:
-                                live.update(_make_markdown("".join(segment)))
-                            live.stop()
-                            live = None
-                        else:
-                            sys.stdout.write("\n")
-                            sys.stdout.flush()
+                        sys.stdout.write("\n")
+                        sys.stdout.flush()
                         last_was_text = False
                     raw_item = item.raw_item
                     name = getattr(raw_item, "name", "?")
                     args = getattr(raw_item, "arguments", "") or ""
-                    if live:
-                        live.stop()
-                        live = None
                     _fmt(style, ("class:tool", _format_tool_line(name, args) + "\n"))
                     need_blank_before_text = True
     finally:
-        if live:
-            if segment:
-                live.update(_make_markdown("".join(segment)))
-            live.stop()
         print()
 
     answer = "".join(collected).strip()
@@ -1014,7 +971,8 @@ async def run_chat(
 
     config = resolve_effective_config(kb_dir)[0]
     language = session.language or config.get("language", "en")
-    agent = build_chat_agent(kb_dir, session.model, language=language)
+    generation_params: dict | None = config.get("generation") or None
+    agent = build_chat_agent(kb_dir, session.model, language=language, generation_params=generation_params)
 
     _print_header(session, kb_dir, style)
     if session.turn_count > 0:
@@ -1054,7 +1012,7 @@ async def run_chat(
                 return
             if action == "new_session":
                 session = ChatSession.new(kb_dir, session.model, session.language)
-                agent = build_chat_agent(kb_dir, session.model, language=language)
+                agent = build_chat_agent(kb_dir, session.model, language=language, generation_params=generation_params)
                 prompt_session = _make_prompt_session(session, style, use_color, kb_dir)
             continue
 
