@@ -64,7 +64,7 @@
 
 | Fact | Source | Retained | Found in |
 |---|---|---|---|
-| ip-109 | server-setup.md | ❌ |  |
+| ip-monitor | server-setup.md | ❌ |  |
 | disk-15 | server-setup.md | ✅ | wiki/concepts/alert-thresholds.md, wiki/concepts/monitoring.md, wiki/entities/monitoring-server.md, wiki/sources/server-setup.md, wiki/summaries/server-setup.md |
 | backup-2-gen | backup-rotation.md | ✅ | wiki/concepts/backup-rotation.md, wiki/concepts/data-retention.md, wiki/sources/backup-rotation.md, wiki/summaries/backup-rotation.md |
 | backup-14-days | backup-rotation.md | ✅ | wiki/concepts/backup-rotation.md, wiki/concepts/data-retention.md, wiki/sources/backup-rotation.md, wiki/summaries/backup-rotation.md |

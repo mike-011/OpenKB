@@ -1,7 +1,7 @@
 # Model bench report — gemma4-12b-ctx32768
 
 - Date/time (UTC): 2026-11-23T14:10:13+00:00 → 2026-11-23T15:05:26+00:00
-- Model: `gemma4:12b` via `ollama_chat` at `http://192.168.100.165:11434`
+- Model: `gemma4:12b` via `ollama_chat` at `http://192.168.0.203:11434`
 - Bench ctx: 32768 · harness (OpenKB): `79bae6d`
 
 ## Group: tool-call structure

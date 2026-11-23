@@ -1,7 +1,7 @@
 # Model bench report — mimo-v2.6-9b-ctx32768
 
 - Date/time (UTC): 2026-11-23T13:51:33+00:00 → 2026-11-23T13:59:39+00:00
-- Model: `mimo-v2.6-9b` via `openai` at `http://192.168.100.165:8081`
+- Model: `mimo-v2.6-9b` via `openai` at `http://192.168.0.203:8081`
 - Bench ctx: 32768 · harness (OpenKB): `ca28d77`
 
 ## Group: tool-call structure

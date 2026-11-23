@@ -2,7 +2,7 @@
   "label": "gemma4-12b-ctx32768",
   "model": "gemma4:12b",
   "provider": "ollama_chat",
-  "api_base": "http://192.168.100.165:11434",
+  "api_base": "http://192.168.0.203:11434",
   "ctx": 32768,
   "harness_sha": "79bae6d",
   "started_utc": "2026-11-23T14:10:13+00:00",

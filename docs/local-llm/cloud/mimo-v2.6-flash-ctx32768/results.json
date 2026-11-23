@@ -565,7 +565,7 @@
           "pass": true,
           "latency_s": 12.38,
           "note": "",
-          "answer_excerpt": "I could not find information about this in the knowledge base.\n\nЯ перевірив усі доступні документи бази знань (індекс, сводки та оригінальні тексти документів про серверне обладнання, мережу VLAN, моніторинг, обслуговування, резервне копіювання тощо), але відомостей про пароль від роутера в серверній там немає. Найближчі за тематикою документи містять лише адресу моніторингового сервера (192.168.100.109), поріог дискового алерта (15 GiB) та номер серверного VLAN (100) — жодних облікових даних для доступу до роутера не зафіксовано."
+          "answer_excerpt": "I could not find information about this in the knowledge base.\n\nЯ перевірив усі доступні документи бази знань (індекс, сводки та оригінальні тексти документів про серверне обладнання, мережу VLAN, моніторинг, обслуговування, резервне копіювання тощо), але відомостей про пароль від роутера в серверній там немає. Найближчі за тематикою документи містять лише адресу моніторингового сервера (192.168.0.137), поріог дискового алерта (15 GiB) та номер серверного VLAN (100) — жодних облікових даних для доступу до роутера не зафіксовано."
         },
         {
           "q": "Jaki jest próg alarmowy wolnego miejsca na dysku?",
@@ -642,7 +642,7 @@
           "pass": true,
           "latency_s": 12.77,
           "note": "",
-          "answer_excerpt": " „router password” itp. Żadna strona nie zawiera haseł ani danych logowania do urządzeń sieciowych.\n\n**I could not find information about this in the knowledge base.**\n\nNajbliższe tematy, które baza zawiera, to:\n- [[summaries/network-vlan]] — opis sieci (VLAN 100 jako serwerowy VLAN), bez danych dostępowych;\n- [[summaries/server-setup]] — adres monitoringu `192.168.100.109` i próg dyskowy 15 GiB;\n- [[concepts/access-management]] i [[concepts/itsm]] — dostęp do systemów uzyskuje się przez zgłoszenie w ITSM, co byłoby prawdopodobnie właściwą drogą, aby uzyskać dostęp do infrastruktury sieciowej."
+          "answer_excerpt": " „router password” itp. Żadna strona nie zawiera haseł ani danych logowania do urządzeń sieciowych.\n\n**I could not find information about this in the knowledge base.**\n\nNajbliższe tematy, które baza zawiera, to:\n- [[summaries/network-vlan]] — opis sieci (VLAN 100 jako serwerowy VLAN), bez danych dostępowych;\n- [[summaries/server-setup]] — adres monitoringu `192.168.0.137` i próg dyskowy 15 GiB;\n- [[concepts/access-management]] i [[concepts/itsm]] — dostęp do systemów uzyskuje się przez zgłoszenie w ITSM, co byłoby prawdopodobnie właściwą drogą, aby uzyskać dostęp do infrastruktury sieciowej."
         }
       ],
       "score": 22,
@@ -650,7 +650,7 @@
       "context_recall": {
         "facts": [
           {
-            "id": "ip-109",
+            "id": "ip-monitor",
             "src": "server-setup.md",
             "retained": false,
             "found_in": []
@@ -759,7 +759,7 @@
     "context_recall": {
       "facts": [
         {
-          "id": "ip-109",
+          "id": "ip-monitor",
           "src": "server-setup.md",
           "retained": false,
           "found_in": []

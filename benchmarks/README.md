@@ -40,7 +40,7 @@ judge tests.
 ```bash
 python benchmarks/model_suite.py \
     --model mimo-v2.6:9b --provider ollama_chat \
-    --api-base http://192.168.100.165:11434 --ctx 32768 \
+    --api-base http://192.168.0.203:11434 --ctx 32768 \
     --label mimo-v2.6-9b-ctx32768 --out docs/local-llm/ollama
 ```
 

@@ -16,7 +16,7 @@ Usage
 -----
     python benchmarks/model_suite.py \
         --model mimo-v2.6:9b --provider ollama_chat \
-        --api-base http://192.168.100.165:11434 --ctx 32768 \
+        --api-base http://192.168.0.203:11434 --ctx 32768 \
         --label mimo-v2.6-9b-ctx32768 --out docs/local-llm/ollama
 
 Writes ``<out>/<label>/results.json`` and ``<out>/<label>/report.md`` with
@@ -194,7 +194,7 @@ SCENARIOS: list[dict[str, Any]] = [
 
 FIXTURES: dict[str, str] = {
     "server-setup.md": (
-        "# Server setup\n\nThe monitoring server runs on 192.168.100.109.\n"
+        "# Server setup\n\nThe monitoring server runs on 192.168.0.137.\n"
         "Disk alarm threshold is 15 GiB free.\n"
     ),
     "backup-rotation.md": (
@@ -411,7 +411,7 @@ REFUSAL_MARKERS = (
 # alternates: a fact matches when ONE needle's tokens all occur in the SAME
 # sentence. Word needles match by prefix (>=2 chars), numbers/times exactly.
 FACTS: list[dict[str, Any]] = [
-    {"id": "ip-109", "src": "server-setup.md", "needles": [["192.168.100.109"]]},
+    {"id": "ip-monitor", "src": "server-setup.md", "needles": [["192.168.0.137"]]},
     {"id": "disk-15", "src": "server-setup.md", "needles": [["15", "gib"]]},
     {
         "id": "backup-2-gen",
@@ -791,6 +791,12 @@ def run_pipeline_group(
     }
 
 
+def mask_endpoint(url: str) -> str:
+    """Mask personal infra endpoints — repo rule (#77): any LAN address in
+    output is rewritten to the approved placeholder pool value."""
+    return re.sub(r"192\.168\.\d+\.\d+", "192.168.0.203", url)
+
+
 def harness_sha() -> str:
     try:
         proc = subprocess.run(
@@ -914,7 +920,7 @@ def main() -> None:
         "label": label,
         "model": args.model,
         "provider": args.provider,
-        "api_base": args.api_base,
+        "api_base": mask_endpoint(args.api_base),
         "ctx": args.ctx,
         "harness_sha": harness_sha(),
         "started_utc": started,
