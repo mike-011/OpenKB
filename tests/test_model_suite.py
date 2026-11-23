@@ -100,6 +100,10 @@ class TestAnswerCites:
 
 
 class TestNormalizeFacts:
+    def test_mask_endpoint_rewrites_lan(self):
+        assert ms.mask_endpoint("http://192.168.77.55:8081") == "http://192.168.0.203:8081"
+        assert ms.mask_endpoint("https://ollama.com") == "https://ollama.com"
+
     def test_units_dates_times_canonical(self):
         toks = ms.normalize_tokens(
             "Порог 15 ГБ; миграция 30 ноября 2026; резерв в 02:00 по Варшаве"
