@@ -239,6 +239,7 @@ def build_query_agent(
             directory: Subdirectory name, one of: summaries, concepts, entities, explorations.
         """
         from openkb.agent.tools import list_wiki_files
+
         return list_wiki_files(directory, wiki_root)
 
     from agents.model_settings import ModelSettings
@@ -382,7 +383,9 @@ def build_chat_agent(
     """
     wiki_root = str(kb_dir / "wiki")
     kb_root = str(kb_dir)
-    base = build_query_agent(wiki_root, model, language=language, bundle=bundle, generation_params=generation_params)
+    base = build_query_agent(
+        wiki_root, model, language=language, bundle=bundle, generation_params=generation_params
+    )
 
     @function_tool
     def write_file(path: str, content: str) -> str:
@@ -536,7 +539,9 @@ async def run_query(
 
     wiki_root = str(kb_dir / "wiki")
 
-    agent = build_query_agent(wiki_root, model, language=language, bundle=bundle, generation_params=generation_params)
+    agent = build_query_agent(
+        wiki_root, model, language=language, bundle=bundle, generation_params=generation_params
+    )
 
     if not stream:
         if is_ollama_backend(model):
