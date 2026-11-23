@@ -14,10 +14,18 @@ const LINKS: { id: string; href: string; icon: typeof Globe }[] = [
 export default function AboutTab() {
   const { t } = useTranslation('settings')
   const [version, setVersion] = useState<string | null>(null)
+  const [build, setBuild] = useState<string | null>(null)
+  const [channel, setChannel] = useState<string | null>(null)
   useEffect(() => {
     let cancelled = false
     getMeta()
-      .then((m) => { if (!cancelled) setVersion(m.version) })
+      .then((m) => {
+        if (!cancelled) {
+          setVersion(m.version)
+          setBuild(m.build ?? null)
+          setChannel(m.channel ?? null)
+        }
+      })
       .catch(() => { /* leave as null → shows — */ })
     return () => { cancelled = true }
   }, [])
@@ -29,7 +37,7 @@ export default function AboutTab() {
         <div className="min-w-0">
           <div className="text-[16px] font-bold text-foreground">OpenKB</div>
           <div className="text-[12.5px] text-muted-foreground">
-            Open LLM Knowledge Base · <span className="tabular-nums">v{version ?? '—'}</span> · Apache-2.0
+            Open LLM Knowledge Base · <span className="tabular-nums">v{version ?? '—'}{build ? ` · ${build}` : ''}{channel ? ` · ${channel}` : ''}</span> · Apache-2.0
           </div>
         </div>
       </div>

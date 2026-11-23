@@ -30,3 +30,8 @@ examples/docs/
 # Shipped inside the wheel via hatchling `artifacts`, never committed to git.
 /openkb/web/
 web/
+
+# build versioning artifacts (#81) — build-host state / baked stamp
+.build-counter
+openkb/_build_stamp
+openkb/_build_channel

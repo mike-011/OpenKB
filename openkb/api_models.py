@@ -405,6 +405,8 @@ class KbDeleteResponse(BaseModel):
 
 class MetaResponse(BaseModel):
     version: str
+    build: str = "dev"
+    channel: str = "dev"
 
 
 class _KbConfigWritable(BaseModel):

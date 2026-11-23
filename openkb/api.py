@@ -182,9 +182,17 @@ def create_app() -> FastAPI:
     async def meta_endpoint(
         _: None = Depends(require_bearer_token),
     ) -> MetaResponse:
-        from openkb import __version__
+        from openkb.version import build_stamp, channel, release
 
-        return MetaResponse(version=__version__)
+        return MetaResponse(version=release(), build=build_stamp(), channel=channel())
+
+    @app.get("/api/v1/version")
+    async def version_endpoint(
+        _: None = Depends(require_bearer_token),
+    ) -> dict[str, str]:
+        from openkb.version import version_info
+
+        return version_info()
 
     @app.get("/api/v1/kb/config", response_model=KbConfigResponse)
     async def kb_config_get_endpoint(
