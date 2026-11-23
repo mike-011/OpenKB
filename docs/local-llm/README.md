@@ -15,8 +15,8 @@
 | ministral-3-14b-q4km | llama.cpp | 14 | 10 | 9 | идеальные тулы, слабые цитаты | [report](llama-cpp/ministral-3-14b-q4km-ctx32768/report.md) |
 | mimo-v2.6-9b | llama.cpp | 13 | 20 | 9 | лидер среди локальных | [report](llama-cpp/mimo-v2.6-9b-ctx32768/report.md) |
 | gemma4-12b | Ollama | 13 | 9 | 9 | факты верны, цитаты пропускает | [report](ollama/gemma4-12b-ctx32768/report.md) |
-| qwen3-14b | Ollama | — | — | — | в полёте | — |
-| qwen3.5-9b | Ollama | — | — | — | в очереди | — |
+| qwen3-14b | Ollama | 13 | 22 | 9 | второй после облака по ответам | [report](ollama/qwen3-14b-ctx32768/report.md) |
+| qwen3.5-9b | Ollama | 13 | 7 | 9 | тулы ок, ответы слабые | [report](ollama/qwen3.5-9b-ctx32768/report.md) |
 
 Старые результаты v1 (одна RU/EN-матрица) пережиты; все модели перегоняются
 под 4 языка + context-recall (см. benchmarks/README.md).
