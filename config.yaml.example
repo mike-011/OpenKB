@@ -37,6 +37,7 @@ pageindex_threshold: 20          # PDF pages threshold for PageIndex
 #     Editor-Version: vscode/1.95.0
 #     Copilot-Integration-Id: vscode-chat
 
+<<<<<<< HEAD
 # Optional: Ollama-specific tuning for local models (issue #205).
 # Only applies when model is an ollama/... or ollama_chat/... model.
 # ollama:
@@ -49,3 +50,11 @@ pageindex_threshold: 20          # PDF pages threshold for PageIndex
 #                             # name (e.g. calls 'get_topics' instead of
 #                             # 'read_file'). Default 3. Increase for very
 #                             # small models that need more correction.
+#
+# Optional: enable detailed per-file debug logging without passing `-v` on
+# every command. Each processed file gets its own log at
+# logs/<file-name>.<ext>.log (created next to raw/, sources/, wiki/) with the
+# full LLM request/response dump and tracebacks; the console keeps showing
+# only the normal status lines and WARNING+ messages. Handy for unattended
+# batch `add` runs where you only want to dig into the log after a failure.
+# debug: true
