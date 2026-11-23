@@ -27,7 +27,6 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
-import time
 from pathlib import Path
 
 # CJK Unified Ideographs (+ ext A, compat). Runs of these get bigram-ised.
@@ -68,10 +67,7 @@ def _connect(db_path: Path) -> sqlite3.Connection:
         "content, raw UNINDEXED, kind UNINDEXED, path UNINDEXED, page UNINDEXED,"
         " tokenize='unicode61')"
     )
-    con.execute(
-        "CREATE TABLE IF NOT EXISTS files("
-        "path TEXT PRIMARY KEY, mtime REAL, size INTEGER)"
-    )
+    con.execute("CREATE TABLE IF NOT EXISTS files(path TEXT PRIMARY KEY, mtime REAL, size INTEGER)")
     return con
 
 
@@ -200,7 +196,7 @@ def _fts_expr(query: str) -> tuple[str, str, list[str]]:
         if not tok:
             continue
         raw_terms.append(tok)
-        subs: list[str] = []
+        subs: list[tuple[str, str]] = []
         pos = 0
         for m in _CJK_RE.finditer(tok):
             if m.start() > pos:

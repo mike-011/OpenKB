@@ -10,8 +10,8 @@ from openkb.fts import (
     _bigramize,
     _fts_expr,
     ensure_index,
-    fts_db_path,
     format_hits,
+    fts_db_path,
     rebuild_index,
     search,
 )

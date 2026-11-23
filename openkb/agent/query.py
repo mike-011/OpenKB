@@ -107,7 +107,8 @@ def build_query_agent(
             query: Keywords, e.g. 'ETA 川普 豁免' or 'transformer attention'.
             limit: Max hits (default 8).
         """
-        from openkb.fts import format_hits, search as fts_search
+        from openkb.fts import format_hits
+        from openkb.fts import search as fts_search
 
         kb_dir = Path(wiki_root).parent
         try:
