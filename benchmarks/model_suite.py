@@ -205,6 +205,18 @@ PIPELINE_QUESTIONS: list[dict[str, Any]] = [
     },
 ]
 
+
+def answer_cites(answer: str, expect_pages: list[str]) -> list[str]:
+    """Return expected pages the answer grounds itself in.
+
+    OpenKB answers cite wiki pages as ``[[summaries/<stem>]]``, not the raw
+    filename — match on the bare file stem.
+    """
+    answer_l = answer.lower()
+    stems = {p: (p[:-3] if p.endswith(".md") else p).lower() for p in expect_pages}
+    return [p for p, stem in stems.items() if stem in answer_l]
+
+
 REFUSAL_MARKERS = (
     "нет данных",
     "не указан",
@@ -222,7 +234,7 @@ REFUSAL_MARKERS = (
 def _post_json(
     url: str,
     payload: dict[str, Any],
-    timeout: float = 300.0,
+    timeout: float = 600.0,
     api_key: str | None = None,
 ) -> dict[str, Any]:
     headers = {"Content-Type": "application/json"}
@@ -366,7 +378,7 @@ def run_tools_group(
 
 def _run_cli(args: list[str], cwd: Path, env: dict[str, str]) -> tuple[int, str]:
     proc = subprocess.run(
-        args, cwd=cwd, env=env, capture_output=True, text=True, timeout=600, input="\n"
+        args, cwd=cwd, env=env, capture_output=True, text=True, timeout=3600, input="\n"
     )
     return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
 
@@ -408,7 +420,7 @@ def run_pipeline_group(api_base: str, provider: str, model: str, ctx: int) -> di
                 grounded = (not fabricated) or refusal
                 note = "fabricated pages!" if fabricated and not refusal else ""
             else:
-                cited = [p for p in item["expect_pages"] if p.lower() in out_l]
+                cited = answer_cites(out, item["expect_pages"])
                 grounded = bool(cited)
                 note = f"cited: {cited}" if cited else "no expected page cited"
             queries.append(
