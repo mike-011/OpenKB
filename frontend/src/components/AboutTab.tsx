@@ -11,6 +11,15 @@ const LINKS: { id: string; href: string; icon: typeof Globe }[] = [
   { id: 'company', href: 'https://vectify.ai', icon: Globe },
 ]
 
+// Ported-code credits — kept in sync with the release Acknowledgements (#86).
+const THANKS: { name: string; href: string }[] = [
+  { name: 'kalyan-fireweave', href: 'https://github.com/kalyan-fireweave' },
+  { name: 'sebastianbraun25', href: 'https://github.com/sebastianbraun25' },
+  { name: 'runmanfm-bit', href: 'https://github.com/runmanfm-bit' },
+  { name: 'pes-innovation-lab', href: 'https://github.com/pes-innovation-lab' },
+  { name: 'jidechao', href: 'https://github.com/jidechao' },
+]
+
 export default function AboutTab() {
   const { t } = useTranslation('settings')
   const [version, setVersion] = useState<string | null>(null)
@@ -37,8 +46,14 @@ export default function AboutTab() {
         <div className="min-w-0">
           <div className="text-[16px] font-bold text-foreground">OpenKB</div>
           <div className="text-[12.5px] text-muted-foreground">
-            Open LLM Knowledge Base · <span className="tabular-nums">v{version ?? '—'}{build ? ` · ${build}` : ''}{channel ? ` · ${channel}` : ''}</span> · Apache-2.0
+            Open LLM Knowledge Base · <span className="tabular-nums">v{version ?? '—'}</span> · Apache-2.0
           </div>
+          {build && (
+            <div className="text-[12.5px] text-muted-foreground tabular-nums">
+              build: {build}
+              {channel ? ` · ${channel}` : ''}
+            </div>
+          )}
         </div>
       </div>
 
@@ -46,6 +61,9 @@ export default function AboutTab() {
         {t('about.blurb')}
       </p>
       <p className="text-[12.5px] text-muted-foreground">{t('about.byline')}</p>
+      <p className="text-[12.5px] text-muted-foreground">
+        fork: OpenKB Community Edition by sysadmins
+      </p>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {LINKS.map((l) => (
@@ -71,6 +89,32 @@ export default function AboutTab() {
       >
         <Rocket className="w-4 h-4" /> {t('about.latestRelease')}
       </a>
+
+      <a
+        href="https://github.com/mike-011/OpenKB"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 text-[13px] font-medium text-accent-brand hover:underline"
+      >
+        <Github className="w-4 h-4" /> Forked repo — mike-011/OpenKB
+      </a>
+
+      <div className="text-[12.5px] text-muted-foreground">
+        Thanks to:{' '}
+        {THANKS.map((a, i) => (
+          <span key={a.href}>
+            {i > 0 && ', '}
+            <a
+              href={a.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent-brand hover:underline"
+            >
+              {a.name}
+            </a>
+          </span>
+        ))}
+      </div>
     </div>
   )
 }
