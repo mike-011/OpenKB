@@ -17,6 +17,7 @@ from openkb.agent.tools import (
     artifact_event_from_write,
     get_wiki_page_content,
     read_wiki_file,
+    read_wiki_files,
     read_wiki_image,
     write_kb_file,
 )
@@ -26,7 +27,12 @@ from openkb.schema import get_agents_md
 MAX_TURNS = 50
 
 _QUERY_INSTRUCTIONS_TEMPLATE = """\
-You are OpenKB, a knowledge-base Q&A agent. You answer questions by searching the wiki.
+You are OpenKB, a knowledge-base Q&A agent.
+
+HARD RULE: Your answer MUST be based only on content you retrieved using the \
+tools below. Never use your training knowledge to fill gaps. If the wiki does \
+not contain enough information, say exactly: \
+"I could not find information about this in the knowledge base."
 
 {schema_md}
 
@@ -57,11 +63,84 @@ You are OpenKB, a knowledge-base Q&A agent. You answer questions by searching th
    get_image tool — it accepts both.
 7. Synthesize a clear, concise, well-cited answer grounded in wiki content.
 
-Answer based only on wiki content. Be concise.
-Before each tool call, output one short sentence explaining the reason.
+## Wiki catalog (pre-loaded)
 
-If you cannot find relevant information, say so clearly.
+The following index and tag index show everything currently in the wiki.
+Use them to identify which pages are relevant, then call read_files to \
+read their full content.
+
+### index.md
+{index_md}
+
+### tags.md
+{tags_md}
+
+## How to answer
+
+You MUST call at least one tool before writing your answer. \
+Do not answer from the catalog above alone — always read the full page first.
+
+### Step 1 — Identify relevant pages
+Scan index.md and tags.md above. Pick every entry that may be relevant to \
+the question.
+
+### Step 2 — Load all relevant pages at once
+Convert each identified wikilink to a file path by appending ".md". \
+The directory prefix is exact — never change it.
+
+Conversion table:
+  [[summaries/X]]  →  "summaries/X.md"
+  [[concepts/X]]   →  "concepts/X.md"
+  [[entities/X]]   →  "entities/X.md"
+
+Collect ALL relevant paths from Step 1, then call read_files ONCE with \
+the full list. Do not call read_file or read_files separately for each path.
+
+### Step 3 — Depth-1 link follow (one more read_files call, then stop)
+After reading the pages from Step 2, collect every [[wikilink]] in those \
+pages and in their "Related" sections. Call read_files ONCE with all of \
+those linked paths that are relevant to the question.
+This is your depth-1 pass. Do NOT follow any links found in these depth-1 \
+pages. Stop here.
+
+### Step 4 — Get the original source text when needed
+Check the frontmatter of each summary page you read. It contains a \
+"doc_type" field. Use the table below — do not improvise:
+
+| doc_type   | What to do                                                          |
+|------------|---------------------------------------------------------------------|
+| short      | Call read_file with the path in the "full_text" frontmatter field.  |
+| pageindex  | Call get_page_content(doc_name, pages) using the page ranges shown  |
+|            | in the summary tree. Keep page ranges tight (only what you need).   |
+
+### Step 5 — Verify before writing
+Before writing your answer, confirm:
+- Did you call read_file, read_files, or get_page_content at least once?
+- Is every fact you are about to state present in the tool output you received?
+
+If either check fails, go back and call the missing tools now.
+
+### Step 6 — Write your answer
+Write a thorough, detailed answer that:
+- Synthesizes content from ALL pages you read — do not summarize one page \
+and ignore the others.
+- Explains every concept in full — not just names or one-line descriptions. \
+Expand on how things work, why they matter, and how they relate to each other.
+- Explicitly cross-references related pages: when two pages share a concept \
+or dependency, describe that connection in your answer.
+- Never says "refer to page X for more information" or "see X for details" — \
+if that page is relevant, you must have already read it and included its \
+content above.
+- Contains ONLY information from tool output. Do not use training data.
 """
+
+
+def _read_wiki_section(wiki_root: str, filename: str) -> str:
+    """Read a wiki file for pre-loading into the system prompt."""
+    path = Path(wiki_root) / filename
+    if path.exists():
+        return path.read_text(encoding="utf-8")
+    return f"({filename} not found)"
 
 
 def build_query_agent(
@@ -69,10 +148,17 @@ def build_query_agent(
     model: str,
     language: str = "en",
     bundle: "LlmCredentialBundle | None" = None,
+    generation_params: dict | None = None,
 ) -> Agent:
     """Build and return the Q&A agent."""
     schema_md = get_agents_md(Path(wiki_root))
-    instructions = _QUERY_INSTRUCTIONS_TEMPLATE.format(schema_md=schema_md)
+    index_md = _read_wiki_section(wiki_root, "index.md")
+    tags_md = _read_wiki_section(wiki_root, "tags.md")
+    instructions = _QUERY_INSTRUCTIONS_TEMPLATE.format(
+        schema_md=schema_md,
+        index_md=index_md,
+        tags_md=tags_md,
+    )
     instructions += f"\n\nIMPORTANT: Answer in {language} language."
 
     @function_tool
@@ -82,6 +168,17 @@ def build_query_agent(
             path: File path relative to wiki root (e.g. 'summaries/paper.md').
         """
         return read_wiki_file(path, wiki_root)
+
+    @function_tool
+    def read_files(paths: list[str]) -> str:
+        """Read multiple Markdown files from the wiki in a single call.
+        Use this for the initial batch load (Step 2) and the depth-1 link
+        follow (Step 3). Prefer this over calling read_file repeatedly.
+        Args:
+            paths: List of file paths relative to wiki root
+                   (e.g. ['summaries/foo.md', 'concepts/bar.md']).
+        """
+        return read_wiki_files(paths, wiki_root)
 
     @function_tool
     def get_page_content(doc_name: str, pages: str) -> str:
@@ -134,6 +231,17 @@ def build_query_agent(
             return ToolOutputImage(image_url=result["image_url"])
         return ToolOutputText(text=result["text"])
 
+    @function_tool
+    def list_directory(directory: str) -> str:
+        """List all .md files in a wiki subdirectory.
+        Use this when unsure which files exist before calling read_file.
+        Args:
+            directory: Subdirectory name, one of: summaries, concepts, entities, explorations.
+        """
+        from openkb.agent.tools import list_wiki_files
+
+        return list_wiki_files(directory, wiki_root)
+
     from agents.model_settings import ModelSettings
 
     if bundle is not None:
@@ -146,11 +254,13 @@ def build_query_agent(
         }
     else:
         model_settings = resolve_model_settings()
+    if generation_params:
+        model_settings = {**model_settings, "extra_body": generation_params}
 
     return Agent(
         name="wiki-query",
         instructions=instructions,
-        tools=[search, read_file, get_page_content, get_image],
+        tools=[search, read_file, read_files, list_directory, get_page_content, get_image],
         model=f"litellm/{rewrite_ollama_model(model)}",
         model_settings=ModelSettings(**model_settings),
     )
@@ -254,6 +364,7 @@ def build_chat_agent(
     model: str,
     language: str = "en",
     bundle: "LlmCredentialBundle | None" = None,
+    generation_params: dict | None = None,
 ) -> Agent:
     """Build the chat agent: query agent + a write tool restricted to
     ``<kb>/wiki/explorations/**`` and ``<kb>/output/**`` + a ``ShellTool``
@@ -272,7 +383,9 @@ def build_chat_agent(
     """
     wiki_root = str(kb_dir / "wiki")
     kb_root = str(kb_dir)
-    base = build_query_agent(wiki_root, model, language=language, bundle=bundle)
+    base = build_query_agent(
+        wiki_root, model, language=language, bundle=bundle, generation_params=generation_params
+    )
 
     @function_tool
     def write_file(path: str, content: str) -> str:
@@ -422,10 +535,13 @@ async def run_query(
 
     config = resolve_effective_config(kb_dir)[0]
     language: str = config.get("language", "en")
+    generation_params: dict | None = config.get("generation") or None
 
     wiki_root = str(kb_dir / "wiki")
 
-    agent = build_query_agent(wiki_root, model, language=language, bundle=bundle)
+    agent = build_query_agent(
+        wiki_root, model, language=language, bundle=bundle, generation_params=generation_params
+    )
 
     if not stream:
         if is_ollama_backend(model):
@@ -451,27 +567,10 @@ async def run_query(
         _build_style,
         _fmt,
         _format_tool_line,
-        _make_markdown,
-        _make_rich_console,
     )
 
     style = _build_style(use_color)
 
-    from rich.live import Live
-
-    if use_color and not raw:
-        console = _make_rich_console()
-    else:
-        console = None  # type: ignore[assignment]
-
-    def _start_live() -> Live | None:
-        if console is None:
-            return None
-        lv = Live(console=console, vertical_overflow="visible")
-        lv.start()
-        return lv
-
-    live: Live | None = None
     last_was_text = False
     need_blank_before_text = False
     if is_ollama_backend(model):
@@ -488,62 +587,34 @@ async def run_query(
             else Runner.run_streamed(agent, question, max_turns=MAX_TURNS)
         )
     collected: list[str] = []
-    segment: list[str] = []
     try:
-        live = _start_live()
         async for event in result.stream_events():
             if isinstance(event, RawResponsesStreamEvent):
                 if isinstance(event.data, ResponseTextDeltaEvent):
                     text = event.data.delta
                     if text:
                         if need_blank_before_text:
-                            if console is not None:
-                                print()
-                                segment = []
-                                live = _start_live()
-                            else:
-                                sys.stdout.write("\n")
+                            sys.stdout.write("\n")
                             need_blank_before_text = False
                         collected.append(text)
-                        segment.append(text)
                         last_was_text = True
-                        if live:
-                            if "\n" in text:
-                                joined = "".join(segment)
-                                visible = joined[: joined.rfind("\n") + 1]
-                                if visible:
-                                    live.update(_make_markdown(visible))
-                        else:
-                            sys.stdout.write(text)
-                            sys.stdout.flush()
+                        sys.stdout.write(text)
+                        sys.stdout.flush()
             elif isinstance(event, RunItemStreamEvent):
                 item = event.item
                 if item.type == "tool_call_item":
                     if last_was_text:
-                        if live:
-                            if segment:
-                                live.update(_make_markdown("".join(segment)))
-                            live.stop()
-                            live = None
-                        else:
-                            sys.stdout.write("\n")
-                            sys.stdout.flush()
+                        sys.stdout.write("\n")
+                        sys.stdout.flush()
                         last_was_text = False
                     raw_item = item.raw_item
                     name = getattr(raw_item, "name", "?")
                     args = getattr(raw_item, "arguments", "") or ""
-                    if live:
-                        live.stop()
-                        live = None
                     _fmt(style, ("class:tool", _format_tool_line(name, args) + "\n"))
                     need_blank_before_text = True
                 elif item.type == "tool_call_output_item":
                     pass
     finally:
-        if live:
-            if segment:
-                live.update(_make_markdown("".join(segment)))
-            live.stop()
         print()
     return "".join(collected) if collected else result.final_output or ""
 
