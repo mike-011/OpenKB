@@ -19,3 +19,12 @@ test("REST API answers from the app origin", async ({ request }) => {
   const resp = await request.get("/api/v1/config");
   expect(resp.status()).toBeLessThan(500);
 });
+
+test("about shows build line, fork credit and thanks list", async ({ page }) => {
+  await page.goto("/#/settings");
+  await page.getByText("About", { exact: true }).click();
+  await expect(page.getByText(/^build:/)).toBeVisible();
+  await expect(page.getByText(/fork: OpenKB Community Edition by sysadmins/)).toBeVisible();
+  await expect(page.getByText("Forked repo — mike-011/OpenKB")).toBeVisible();
+  await expect(page.getByText("Thanks to:")).toBeVisible();
+});
