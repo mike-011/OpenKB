@@ -79,3 +79,32 @@ jobs:
         run: |
           npm ci
           npm run build
+
+  # Packaging smoke: install the built wheel with ALL extras in a clean
+  # python:3.11-slim container, check the CLI entry point and boot the
+  # REST app (no LLM calls, no network beyond PyPI). Catches broken
+  # wheels, missing deps and missing extras (#46 class).
+  container-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@692973e3d973129bcbf40652eb9f2f61becf3332  # v4.1.7
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
+        with:
+          version: "0.10.2"
+          enable-cache: true
+
+      - name: Build wheel
+        run: uv build --wheel
+
+      - name: Boot smoke in clean container
+        run: |
+          docker run --rm -v "$PWD/dist:/dist:ro" -v "$PWD/.github/scripts:/smoke:ro" python:3.11-slim sh -c '
+            set -e
+            WHL=$(ls /dist/openkb-*.whl)
+            pip install -q httpx "openkb[web,api,s3,gdrive,onedrive] @ file://${WHL}"
+            openkb --help > /dev/null
+            python /smoke/boot_smoke.py
+          '
