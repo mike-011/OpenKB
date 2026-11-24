@@ -4,7 +4,7 @@ Every completed GitHub Actions run posts one message to the owner's Telegram
 group + topic — **for any conclusion**, never silently. Implemented by
 [`.github/workflows/telegram-notify.yml`](../.github/workflows/telegram-notify.yml)
 + [`../.github/scripts/telegram_notify.py`](../.github/scripts/telegram_notify.py);
-behaviour is pinned down by `tests/test_telegram_notify.py`.
+behaviour is pinned down by `tests/test_telegram_notify.py` (40 tests).
 
 ## Message format
 
@@ -13,11 +13,19 @@ behaviour is pinned down by `tests/test_telegram_notify.py`.
 
 ```text
 <icon> <original GitHub conclusion>
-<title verbatim> (<run URL>) (#<run number>)
+<title minus trailing GitHub PR-suffix tokens> (<run URL>) (#<run number>)
+<empty line>
+PR #<n1>
+PR #<n2>
 <empty line>
 <DEV|PROD>: <environment URL from secrets, else the run URL>
 [<optional context line>]
 ```
+
+When **no** pull request is associated with the run's commits, the PR block
+and its separating empty line are both omitted — the message keeps the
+round-3 shape: title line, empty line, env line (then the optional context
+line).
 
 Real shape (example values, `example-org/example-repo`, `prod.example.com`
 and `192.168.0.77` are NOT this repo — the real dev address is a secret and
@@ -25,7 +33,10 @@ never appears in files, logs or comments):
 
 ```text
 ✅ success
-ci: Telegram notifications for every CI run (#101) (https://github.com/example-org/example-repo/actions/runs/1234567890) (#100)
+ci: Telegram notifications for every CI run (https://github.com/example-org/example-repo/actions/runs/1234567890) (#100)
+
+PR #101
+PR #105
 
 DEV: http://192.168.0.77:7566
 PROD : https://example.com
@@ -41,7 +52,12 @@ both come from the same run payload.)
   link form `[title](url)` adapted to the chosen parse mode), then
   ` (#<run number>)` in GitHub's own style. Rules:
   - the title is **verbatim** exactly as GitHub provides it (commit subject or
-    the `title` input) — no prefix stripping, no rewriting (owner correction);
+    the `title` input) with **one named exception** (round 4): GitHub's
+    squash-merge suffix — a trailing ` (#<digits>)` token at the END — is
+    removed **repeatedly until none remain** (`fix(test): something (#107)`
+    → `fix(test): something`; `foo (#107) (#108)` → `foo`). This is a named
+    pattern, not a character count: no other prefix, substring or interior
+    token is ever touched (`strip_pr_suffix()`);
   - the number is the run number **of the very run the URL points to**:
     `html_url` and `run_number` are always read from ONE payload
     (`workflow_run` event fields for trigger runs, the dispatch run's own
@@ -53,7 +69,19 @@ both come from the same run payload.)
     ("link goes to run #100 but the message shows #101") — fixed by the
     same-source rule above.
 - Line 3: **empty**.
-- Line 4: **environment label** + `: ` + the address — the literal `URL`
+- **PR block** (round 4): one line per pull request associated with the run's
+  commits, formatted exactly `PR #N` (decimal number, no link, no trailing
+  punctuation), then a **second empty line** before the env line (mandatory
+  while the block exists). Source of the numbers:
+  `GET /repos/mike-011/OpenKB/commits/{sha}/pulls`
+  (`Accept: application/vnd.github+json`) for **each commit of the run** —
+  the `workflow_run` payload's `commits` when present, else the run's
+  `head_sha` commit (`HEAD_SHA` env / the fetched run object) — **deduped by
+  number and sorted ascending** (`collect_commit_shas()` +
+  `fetch_pr_numbers()`). A failed API lookup degrades to *no PR block*; a
+  notification is never lost or crashed over it. With no PRs found the whole
+  block **including its separating empty line** is omitted.
+- Env line: **environment label** + `: ` + the address — the literal `URL`
   label from earlier rounds is gone. Two labels exist:
   - `DEV: <secrets.TELEGRAM_DEV_URL>` — every build (dev builds are the only
     kind that exist today); if that secret is empty, the run URL is used
@@ -68,8 +96,8 @@ both come from the same run payload.)
   logs and dry-run output mask them as `<ENV URL masked …>`
   (`test_printed_output_masks_env_url_while_payload_carries_it` asserts that
   the printed output masks the address while the Telegram payload carries it).
-- Optional line 5: an extra context string (deployment URL etc.), appended
-  after the URL line. Sources, first match wins:
+- Optional final line: an extra context string (deployment URL etc.),
+  appended after the env line. Sources, first match wins:
   1. `context` input on `workflow_dispatch`;
   2. a `CI-Context:` trailer in the head commit message, e.g.
      `CI-Context: PROD : https://example.com`.
@@ -116,7 +144,7 @@ otherwise each notification would trigger the next one forever.
 - Bot: `@sysadminodua_bot`. Token is **only** in the repository secret
   `TELEGRAM_BOT_TOKEN` (`gh secret set TELEGRAM_BOT_TOKEN`); it is never
   committed, logged, echoed or placed in the payload body.
-- Line-4 target: repository secrets `TELEGRAM_DEV_URL` (dev address, set) and
+- Env-line target: repository secrets `TELEGRAM_DEV_URL` (dev address, set) and
   `TELEGRAM_PROD_URL` (release address — **not set**, deliberately deleted
   until a release exists). The workflow references only `secrets.<NAME>`;
   empty dev secret ⇒ run URL fallback, empty prod secret ⇒ PROD unreachable.
