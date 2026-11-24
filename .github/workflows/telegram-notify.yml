@@ -3,7 +3,13 @@ name: Telegram notify
 # Notifies the owner's Telegram group/topic when a workflow run COMPLETES --
 # for ANY conclusion (success, failure, cancelled, skipped, neutral, timed_out,
 # action_required, stale, startup_failure), always, never silently skipped.
-# Status emoji mapping, message format and setup: docs/telegram-ci-notifications.md
+# Status icon mapping (owner-approved, FINAL) -- line 1 = icon + the ORIGINAL
+# GitHub conclusion text, e.g. "✅ success":
+#   success           -> ✅   failure           -> ❌   cancelled -> ⏹️
+#   skipped           -> ⏭️   timed_out         -> ⏰   action_required -> ⚠️
+#   neutral           -> ⚪   stale             -> ♻️   startup_failure -> 💥
+#   anything unknown  -> ❓ (raw text kept, never crashes, never suppressed)
+# Message format and setup: docs/telegram-ci-notifications.md
 # Ticket: #101
 #
 # Loop guard: only the "product" workflows are listed below; this workflow's

@@ -21,7 +21,7 @@ URL: <run link>
 Real shape (example values, `example-org/example-repo` is not this repo):
 
 ```text
-🟢 success
+✅️ success
 Merge pull request #86 from example/branch (https://github.com/example-org/example-repo/actions/runs/1234567890) (1234567890)
 URL: https://github.com/example-org/example-repo/actions/runs/1234567890
 PROD : https://example.com
@@ -41,18 +41,22 @@ PROD : https://example.com
 
 ## Status mapping (all GitHub Actions conclusions)
 
-| `conclusion`       | Emoji  | Meaning                          |
-| ------------------- | ------ | -------------------------------- |
-| `success`           | 🟢     | all jobs green                   |
-| `failure`           | 🔴     | at least one job failed          |
-| `cancelled`         | 🔵     | run cancelled (superseded/manual)|
-| `skipped`           | ⚪     | run skipped — still notified     |
-| `neutral`           | ⬜     | finished without a verdict       |
-| `timed_out`         | 🟠     | a job exceeded its timeout       |
-| `action_required`   | 🟡     | needs attention (approval/brand) |
-| `stale`             | 🩶     | marked stale by GitHub           |
-| `startup_failure`   | ⛔     | runner failed to start the run   |
-| *(anything else)*   | ❓     | fallback — raw text kept, no crash |
+| `conclusion`       | Icon  | Octicon it mirrors               |
+| ------------------- | ----- | -------------------------------- |
+| `success`           | ✅    | check-circle-fill                |
+| `failure`           | ❌    | x-circle-fill                    |
+| `cancelled`         | ⏹️    | stop-fill / circle-slash         |
+| `skipped`           | ⏭️    | skip-fill (grey slashed circle)  |
+| `neutral`           | ⚪    | grey dot-fill                    |
+| `timed_out`         | ⏰    | clock                            |
+| `action_required`   | ⚠️    | yellow attention                 |
+| `stale`             | ♻️    | refresh (stale)                  |
+| `startup_failure`   | 💥    | x-circle / boom                  |
+| *(anything else)*   | ❓    | fallback — raw text kept, no crash |
+
+The owner approved this exact glyph set as FINAL: line 1 is always
+`<icon> <original GitHub conclusion text>` (e.g. `✅ success`), never a
+translated phrase.
 
 The mapping lives in `STATUS_MAP` in `.github/scripts/telegram_notify.py`; the
 table above and the PR body document the same list. Unknown conclusions fall

@@ -39,9 +39,9 @@ def _text(conclusion: str, **kwargs) -> str:
     return tn.build_text(conclusion, **params)
 
 
-def test_every_conclusion_maps_to_an_emoji():
+def test_every_conclusion_maps_to_an_icon():
     for conclusion in ALL_CONCLUSIONS:
-        assert conclusion in tn.STATUS_MAP, f"no emoji for {conclusion}"
+        assert conclusion in tn.STATUS_MAP, f"no icon for {conclusion}"
         assert tn.STATUS_MAP[conclusion]
 
 
@@ -65,12 +65,12 @@ def test_every_conclusion_builds_a_message_without_crashing():
 
 def test_unknown_conclusion_uses_fallback_and_never_crashes():
     text = _text("something_brand_new")
-    assert text.splitlines()[0] == f"{tn.UNKNOWN_EMOJI} something_brand_new"
+    assert text.splitlines()[0] == f"{tn.UNKNOWN_GLYPH} something_brand_new"
 
 
 def test_empty_and_none_conclusion_are_handled():
-    assert tn.status_line("") == f"{tn.UNKNOWN_EMOJI} unknown"
-    assert tn.status_line(None) == f"{tn.UNKNOWN_EMOJI} unknown"
+    assert tn.status_line("") == f"{tn.UNKNOWN_GLYPH} unknown"
+    assert tn.status_line(None) == f"{tn.UNKNOWN_GLYPH} unknown"
     assert tn.build_text(None, "t", NEUTRAL_URL, "1").count("\n") == 2
 
 
@@ -95,7 +95,7 @@ def test_user_controlled_text_is_html_escaped():
     assert "&lt;script&gt;" in text
     assert "&amp;" in text
     # line 1 stays outside the link: raw emoji + raw status
-    assert text.splitlines()[0] == "🔴 failure"
+    assert text.splitlines()[0] == "❌ failure"
 
 
 def test_url_line_is_escaped_for_html_parse_mode():
@@ -150,3 +150,23 @@ def test_first_line_picks_commit_subject():
     assert tn.first_line(f"{subject}\n\nbody") == subject
     assert tn.first_line("\n\n body ") == "body"
     assert tn.first_line(None) == ""
+
+
+# The owner approved this exact icon map as FINAL (#101) -- lock it down.
+APPROVED_ICONS = {
+    "success": "✅",
+    "failure": "❌",
+    "cancelled": "⏹️",
+    "skipped": "⏭️",
+    "timed_out": "⏰",
+    "action_required": "⚠️",
+    "neutral": "⚪",
+    "stale": "♻️",
+    "startup_failure": "💥",
+}
+
+
+def test_icon_map_matches_owner_approved_mapping():
+    assert tn.STATUS_MAP == APPROVED_ICONS
+    for conclusion, icon in APPROVED_ICONS.items():
+        assert tn.status_line(conclusion) == f"{icon} {conclusion}"
