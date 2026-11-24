@@ -110,13 +110,15 @@ export default function Home() {
                     <div className="text-[14px] font-semibold leading-snug line-clamp-2 min-h-[40px]">
                       {s.title || t("untitledSession")}
                     </div>
-                    <div className="mt-3 flex items-center gap-1.5 text-[11.5px] text-muted-foreground">
-                      <span className={cn("w-1.5 h-1.5 rounded-full", dotFor(s.kbIndex))} />
-                      {s.kb}
+                    <div className="mt-3 flex items-center gap-1.5 min-w-0 text-[11.5px] text-muted-foreground">
+                      <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", dotFor(s.kbIndex))} />
+                      <span className="truncate min-w-0" title={s.kb}>{s.kb}</span>
                       {s.updated_at && (
                         <>
-                          <span className="opacity-50">·</span>
-                          {formatWhen(s.updated_at)}
+                          <span className="opacity-50 shrink-0">·</span>
+                          <span className="whitespace-nowrap tabular-nums shrink-0">
+                            {formatWhen(s.updated_at)}
+                          </span>
                         </>
                       )}
                       <ArrowRight className="w-3.5 h-3.5 ml-auto opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-accent-brand" />
