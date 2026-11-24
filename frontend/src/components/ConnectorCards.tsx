@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
+import { Link } from "react-router"
 import { Cloud, HardDrive, ThumbsUp, type LucideIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { ApiError, apiFetch } from "@/api/client"
@@ -143,8 +144,8 @@ function ProviderCard({ kb, connector }: { kb?: string; connector: Connector }) 
 
   const showForm = Boolean(kb) && (bindings.length === 0 || adding)
 
-  return (
-    <div className="rounded-2xl border border-[hsl(var(--glass-border))] glass px-4 py-3.5">
+  const inner = (
+    <>
       <div className="flex items-center gap-3">
         <span className="w-9 h-9 rounded-xl glass-2 border border-[hsl(var(--glass-border))] grid place-items-center shrink-0">
           <Icon className="w-4 h-4 text-muted-foreground" />
@@ -227,8 +228,27 @@ function ProviderCard({ kb, connector }: { kb?: string; connector: Connector }) 
         </form>
       )}
       {error && <p className="mt-2 text-[12px] text-red-600">{error}</p>}
-    </div>
+    </>
   )
+  const outerCls = "rounded-2xl border border-[hsl(var(--glass-border))] glass px-4 py-3.5"
+  if (!kb) {
+    // No knowledge base selected (Settings / Data sources): the card is a
+    // working link to the KB list — design contract: looks clickable -> IS
+    // clickable (#94).
+    return (
+      <Link
+        to="/kb"
+        title={t(spec.needKb)}
+        className={
+          outerCls +
+          " group block hover:shadow-glass hover:-translate-y-0.5 transition duration-fast ease-out-apple active:scale-[0.99]"
+        }
+      >
+        {inner}
+      </Link>
+    )
+  }
+  return <div className={outerCls}>{inner}</div>
 }
 
 /** Grid of connector cards. Pass `kb` on a knowledge-base page so a shipped provider can bind. */
