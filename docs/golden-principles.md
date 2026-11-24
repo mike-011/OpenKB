@@ -18,6 +18,14 @@ Bench report output masks LAN endpoints automatically
 (`benchmarks.model_suite.mask_endpoint`). Examples in tests must use pool
 values too.
 
+## Public repo, private planning board
+The repository is public; the project board
+(github.com/users/mike-011/projects/6) is PRIVATE planning tooling — outside
+contributors cannot see it. Issues are the public source of truth: any ticket
+asking for outside help (label `help wanted`) must be self-contained —
+problem, files, acceptance and how-to-help all live in the issue body, never
+only in board fields or internal chat.
+
 ## Boundaries
 - **Validate data shapes at boundaries.** Parse/validate inputs (frontmatter via
   `openkb/frontmatter.py`, config via `openkb/config.py`) at the edge. Never build
