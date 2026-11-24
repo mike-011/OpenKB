@@ -13,7 +13,7 @@ behaviour is pinned down by `tests/test_telegram_notify.py`.
 
 ```text
 <icon> <original GitHub conclusion>
-<title verbatim> (<run URL>) (#ticket)
+<title verbatim> (<run URL>) (#<run number>)
 <empty line>
 URL: <PROD_URL from secrets.TELEGRAM_PROD_URL, else the run URL>
 [<optional context line>]
@@ -25,22 +25,33 @@ files, logs or comments):
 
 ```text
 ✅ success
-ci: Telegram notifications for every CI run (#101) (https://github.com/example-org/example-repo/actions/runs/1234567890) (#101)
+ci: Telegram notifications for every CI run (#101) (https://github.com/example-org/example-repo/actions/runs/1234567890) (#100)
 
 URL: https://prod.example.com
 PROD : https://example.com
 ```
 
+(Here the URL path holds the run *id* `1234567890` while the token shows the
+run *number* `100` — GitHub assigns them independently; what matters is that
+both come from the same run payload.)
+
 - Line 1: status icon + the **original GitHub wording** of the conclusion
   (`success`, `timed_out`, …) — not a translation.
 - Line 2: run title as an HTML `<a href>` link to the run URL (the Markdown
   link form `[title](url)` adapted to the chosen parse mode), then
-  ` (#ticket)`. Rules:
+  ` (#<run number>)` in GitHub's own style. Rules:
   - the title is **verbatim** exactly as GitHub provides it (commit subject or
     the `title` input) — no prefix stripping, no rewriting (owner correction);
-  - the run number is NOT appended — it already lives inside the URL;
-  - `#ticket` comes from the `Fixes`/`Refs` ref in the commit body, else the
-    first `(#N)` in the subject, else nothing.
+  - the number is the run number **of the very run the URL points to**:
+    `html_url` and `run_number` are always read from ONE payload
+    (`workflow_run` event fields for trigger runs, the dispatch run's own
+    id/number for tests) — `run_source_from_env()` / the fetched run object
+    make cross-run mixing impossible. The token is omitted rather than guessed
+    if the number is unknown;
+  - no ticket token and no run-id suffix: an earlier `(#ticket)` slot in the
+    owner's mock was actually the run-number slot showing a mismatched value
+    ("link goes to run #100 but the message shows #101") — fixed by the
+    same-source rule above.
 - Line 3: **empty**.
 - Line 4: literal `URL: ` + `<PROD_URL>` from the repository secret
   `TELEGRAM_PROD_URL`; if that secret is empty, the run URL is used instead.

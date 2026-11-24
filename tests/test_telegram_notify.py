@@ -3,16 +3,23 @@
 Loaded straight from ``.github/scripts/telegram_notify.py`` (it is tooling,
 not package code) so the exact file the workflow runs is what gets tested.
 
-Message shape (owner-corrected format, supersedes the earlier one):
+Message shape (owner-corrected format):
 
     <icon> <original GitHub conclusion>
-    <title without conventional prefix> (<run URL>) (#ticket)
+    <title verbatim> (<run URL>) (#<run number of that very run>)
     <empty line>
     URL: <PROD_URL or run URL>
     [<optional context line>]
+
+Line 2 consistency rule: ``html_url`` and ``run_number`` must come from the
+SAME run payload -- GitHub's run URL carries the run *id* while the token
+carries the run *number* (they are different values by design), so the only
+possible bug class is mixing two runs; ``build_text`` therefore accepts a
+single ``run`` mapping and reads both fields from it.
 """
 
 import importlib.util
+import re
 from pathlib import Path
 
 _SCRIPT = Path(__file__).resolve().parents[1] / ".github" / "scripts" / "telegram_notify.py"
@@ -47,7 +54,13 @@ APPROVED_ICONS = {
     "startup_failure": "\U0001f4a5",
 }
 
-NEUTRAL_RUN_URL = "https://github.com/example-org/example-repo/actions/runs/1234567890"
+# One run payload: id + html_url + run_number always travel together.
+RUN = {
+    "id": 1234567890,
+    "html_url": "https://github.com/example-org/example-repo/actions/runs/1234567890",
+    "run_number": 100,
+}
+NEUTRAL_RUN_URL = RUN["html_url"]
 NEUTRAL_PROD_URL = "https://prod.example.com"
 _TITLE_BODY = "Telegram-уведомления о завершении прогонов"
 SUBJECT = f"ci: {_TITLE_BODY} (#101) (#102)"
@@ -56,12 +69,21 @@ SUBJECT = f"ci: {_TITLE_BODY} (#101) (#102)"
 def _text(conclusion: str, **kwargs) -> str:
     params = {
         "title": SUBJECT,
-        "run_url": NEUTRAL_RUN_URL,
-        "ticket": "#101",
+        "run": RUN,
         "prod_url": NEUTRAL_PROD_URL,
     }
     params.update(kwargs)
     return tn.build_text(conclusion, **params)
+
+
+def _url_run_id(url: str) -> str:
+    match = re.search(r"/runs/([0-9]+)", url)
+    return match.group(1) if match else ""
+
+
+def _printed_number(line2: str) -> str:
+    match = re.search(r"\(#([0-9]+)\)\s*$", line2)
+    return match.group(1) if match else ""
 
 
 # ---------------------------------------------------------------- icon line
@@ -106,26 +128,10 @@ def test_title_is_verbatim_no_prefix_stripping():
         "Merge pull request #86 from example/branch",
         SUBJECT,
     ):
-        lines = tn.build_text("success", raw, NEUTRAL_RUN_URL, ticket="#1").splitlines()
+        lines = tn.build_text("success", raw, RUN).splitlines()
         assert tn.escape_html(raw) in lines[1]
-    assert tn.build_text("success", "", NEUTRAL_RUN_URL).splitlines()[1].startswith("<a href=")
-    assert tn.build_text("success", None, NEUTRAL_RUN_URL).splitlines()[1].startswith("<a href=")
-
-
-# --------------------------------------------------------- ticket extraction
-
-
-def test_extract_ticket_prefers_commit_body_refs():
-    assert tn.extract_ticket("ci: whatever (#9)\n\nRefs #101\n") == "#101"
-    assert tn.extract_ticket("fix: whatever\n\nFixes #42\n") == "#42"
-    assert tn.extract_ticket("fix: whatever\n\nfixes: #42\n") == "#42"
-
-
-def test_extract_ticket_falls_back_to_subject_then_nothing():
-    assert tn.extract_ticket("ci: thing (#101) (#102)\n") == "#101"
-    assert tn.extract_ticket("Merge pull request #86 from example/branch\n") == ""
-    assert tn.extract_ticket("") == ""
-    assert tn.extract_ticket(None) == ""
+    assert tn.build_text("success", "", RUN).splitlines()[1].startswith("<a href=")
+    assert tn.build_text("success", None, RUN).splitlines()[1].startswith("<a href=")
 
 
 # ------------------------------------------------------------- message shape
@@ -138,26 +144,47 @@ def test_message_is_four_lines_with_an_empty_third_line():
     assert lines[2] == "", "line 3 must be empty"
 
 
-def test_line_two_title_link_ticket_without_run_number():
-    lines = _text("failure", title=SUBJECT, ticket="#101").splitlines()
+def test_line_two_is_title_link_then_run_number_token():
+    lines = _text("failure", title=SUBJECT).splitlines()
     line2 = lines[1]
     assert line2.startswith(f'<a href="{NEUTRAL_RUN_URL}">{tn.escape_html(SUBJECT)}</a>')
-    assert line2.endswith(" (#101)")
-    # title is verbatim: prefix and its own (#N) refs stay untouched
+    # run-number token, GitHub style: (#<run_number>)
+    assert line2.endswith(" (#100)")
+    # title verbatim: prefix and the subject's own (#N) refs stay untouched
     assert "ci: Telegram" in line2
     assert "(#102)" in line2
-    # the run number must NOT be appended any more (it lives inside the URL)
+    # no big run-id suffix
     assert "(1234567890)" not in line2
 
 
-def test_line_two_without_ticket_omits_the_ref():
-    # No ticket -> nothing is appended after the link (the title itself may
-    # still contain "(#N)" text, since the title is verbatim).
-    lines = _text("success", ticket="", title="plain subject").splitlines()
-    assert lines[1] == f'<a href="{NEUTRAL_RUN_URL}">plain subject</a>'
-    lines = _text("success", ticket="").splitlines()
-    assert lines[1].endswith("</a>")
-    assert "(#101) (#102)</a>" in lines[1]
+def test_number_comes_from_the_same_run_as_the_url():
+    # The bug the owner flagged: URL of run A printed with number of run B.
+    base = "https://github.com/example-org/example-repo/actions/runs/"
+    run_a = {"id": 111, "html_url": f"{base}111", "run_number": 100}
+    run_b = {"id": 222, "html_url": f"{base}222", "run_number": 101}
+    line_a = tn.build_text("success", "title", run_a).splitlines()[1]
+    line_b = tn.build_text("success", "title", run_b).splitlines()[1]
+
+    for run, line in ((run_a, line_a), (run_b, line_b)):
+        assert f'href="{run["html_url"]}"' in line
+        # the URL carries this run's id ...
+        assert _url_run_id(line) == str(run["id"])
+        # ... and the token carries THIS run's number -- never the other one
+        assert _printed_number(line) == str(run["run_number"])
+
+    # explicit anti-mixing assertions
+    assert _printed_number(line_a) == "100" and "runs/111" in line_a
+    assert _printed_number(line_b) == "101" and "runs/222" in line_b
+    assert _printed_number(line_a) != _printed_number(line_b)
+
+
+def test_line_two_omits_token_when_number_unavailable():
+    lines = tn.build_text(
+        "success", "plain subject", {"id": 7, "html_url": "https://x.example/runs/7"}
+    ).splitlines()
+    assert lines[1] == '<a href="https://x.example/runs/7">plain subject</a>'
+    # nothing at all is appended -- a wrong number is worse than none
+    assert "(#" not in lines[1]
 
 
 def test_url_line_uses_prod_url():
@@ -189,7 +216,7 @@ def test_every_conclusion_builds_a_message_without_crashing():
 
 
 def test_empty_and_none_conclusion_are_handled():
-    lines = tn.build_text(None, "t", NEUTRAL_RUN_URL, ticket="", prod_url="").splitlines()
+    lines = tn.build_text(None, "t", RUN, prod_url="").splitlines()
     assert len(lines) == 4
     assert lines[0] == f"{tn.UNKNOWN_GLYPH} unknown"
 
@@ -208,8 +235,12 @@ def test_user_controlled_text_is_html_escaped():
 
 
 def test_url_line_is_escaped_for_html_parse_mode():
-    url = "https://github.com/example-org/example-repo/actions/runs/1?a=1&b=2"
-    lines = _text("success", run_url=url, prod_url="").splitlines()
+    run = {
+        "id": 1,
+        "html_url": "https://github.com/example-org/example-repo/actions/runs/1?a=1&b=2",
+        "run_number": 5,
+    }
+    lines = _text("success", run=run, prod_url="").splitlines()
     assert "a=1&amp;b=2" in lines[3]
     href = '<a href="https://github.com/example-org/example-repo/actions/runs/1?a=1&amp;b=2">'
     assert href in lines[1]
@@ -256,3 +287,30 @@ def test_first_line_picks_commit_subject():
     assert tn.first_line(f"{subject}\n\nbody") == subject
     assert tn.first_line("\n\n body ") == "body"
     assert tn.first_line(None) == ""
+
+
+def test_run_source_from_env_never_mixes_runs():
+    # Both fields are taken from ONE event payload (workflow_run) or ONE
+    # dispatch run -- never url from one and number from another.
+    env = {
+        "RUN_URL": "https://github.com/example-org/example-repo/actions/runs/111",
+        "RUN_NUMBER": "100",
+        "RUN_ID": "111",
+    }
+    source = tn.run_source_from_env(env, "example-org/example-repo")
+    assert source == {
+        "html_url": env["RUN_URL"],
+        "run_number": env["RUN_NUMBER"],
+        "id": env["RUN_ID"],
+    }
+    line = tn.build_text("success", "t", source).splitlines()[1]
+    assert _url_run_id(line) == "111" and _printed_number(line) == "100"
+
+    # dispatch fallback: no RUN_URL -> the URL is built from THIS run's id and
+    # the number is this run's own number
+    dispatch = tn.run_source_from_env(
+        {"RUN_NUMBER": "101", "RUN_ID": "222"}, "example-org/example-repo"
+    )
+    assert dispatch["html_url"].endswith("/runs/222")
+    line = tn.build_text("success", "t", dispatch).splitlines()[1]
+    assert _url_run_id(line) == "222" and _printed_number(line) == "101"

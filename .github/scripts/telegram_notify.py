@@ -8,16 +8,18 @@ GitHub conclusion text (see ``STATUS_MAP``).
 Message shape (owner-corrected format, supersedes the earlier one):
 
     <icon> <original GitHub conclusion>            e.g.  "✅ success"
-    <title> (<run URL>) (#ticket)
+    <title verbatim> (<run URL>) (#<run number>)
     <empty line>
     URL: <PROD_URL from secrets.TELEGRAM_PROD_URL, else the run URL>
     [<optional context line>]
 
 Line 2 rules: the title goes VERBATIM exactly as GitHub provides it (commit
-subject or the ``title`` input -- no prefix stripping, no rewriting); the run
-number is NOT shown (it lives inside the URL); "(#ticket)" is appended from
-the Fixes/Refs ref in the commit body, else the first "(#N)" in the subject,
-else nothing.
+subject or the ``title`` input -- no prefix stripping, no rewriting); the
+trailing token is "(#<run number>)" in GitHub's own style, and that number
+must be the run number OF THE VERY RUN the URL points to -- ``html_url`` and
+``run_number`` are always read from one payload (``run_source_from_env`` /
+the fetched run object), never mixed across runs. Unknown number -> token
+omitted rather than guessed.
 
 Secrets: ``TELEGRAM_BOT_TOKEN`` (auth) and ``TELEGRAM_PROD_URL`` (line 4) are
 repository secrets -- never printed, logged, committed or put in the repo.
@@ -30,10 +32,10 @@ import argparse
 import html
 import json
 import os
-import re
 import sys
 import urllib.error
 import urllib.request
+from collections.abc import Mapping
 
 TELEGRAM_API = "https://api.telegram.org"
 GITHUB_API = "https://api.github.com"
@@ -41,11 +43,6 @@ GITHUB_API = "https://api.github.com"
 # Trailer honoured in the head commit message for an extra context line, e.g.
 #   CI-Context: PROD : https://example.com
 CONTEXT_TRAILER = "ci-context"
-
-# Ticket from the commit body: "Fixes #123" / "Refs: #123".
-BODY_REF_RE = re.compile(r"(?i)\b(?:fixes|refs)\s*:?\s*#([0-9]+)")
-# Fallback: first "(#N)" in the subject.
-SUBJECT_TICKET_RE = re.compile(r"\(#([0-9]+)\)")
 
 REDACTED = "<PROD_URL masked: real infra identifiers never appear in logs>"
 
@@ -95,17 +92,6 @@ def first_line(text: str | None) -> str:
     return ""
 
 
-def extract_ticket(message: str | None) -> str:
-    """``"#101"`` from the commit body (Fixes/Refs), subject "(#N)", or ''."""
-    body_match = BODY_REF_RE.search(message or "")
-    if body_match:
-        return f"#{body_match.group(1)}"
-    subject_match = SUBJECT_TICKET_RE.search(first_line(message))
-    if subject_match:
-        return f"#{subject_match.group(1)}"
-    return ""
-
-
 def context_from_commit(message: str | None) -> str:
     """Value of the ``CI-Context:`` trailer in a commit message, or ''."""
     for line in (message or "").splitlines():
@@ -123,11 +109,29 @@ def redact(text: str, secret_value: str) -> str:
     return text.replace(value, REDACTED)
 
 
+def run_source_from_env(env: Mapping[str, str], repo: str) -> dict:
+    """Build the single run mapping used for line 2 from ONE event source.
+
+    ``html_url`` and ``run_number`` always come from the same payload (the
+    ``workflow_run`` event fields, or this dispatch run's own id/number) --
+    mixing a URL of one run with the number of another is the bug this
+    function exists to make impossible.
+    """
+    run_id = str(env.get("RUN_ID", "") or "").strip()
+    run_url = str(env.get("RUN_URL", "") or "").strip()
+    if not run_url and repo and run_id:
+        run_url = f"https://github.com/{repo}/actions/runs/{run_id}"
+    return {
+        "html_url": run_url,
+        "run_number": str(env.get("RUN_NUMBER", "") or "").strip(),
+        "id": run_id,
+    }
+
+
 def build_text(
     conclusion: str | None,
     title: str,
-    run_url: str,
-    ticket: str = "",
+    run: dict | None = None,
     prod_url: str = "",
     context: str = "",
 ) -> str:
@@ -135,9 +139,19 @@ def build_text(
 
     ``title`` is used VERBATIM (commit subject or the ``title`` input) --
     no prefix stripping, no rewriting (owner correction to #101).
+
+    Line 2 = ``<title verbatim> (<run URL>) (#<run number>)``: both fields
+    are read from the SAME ``run`` mapping (see ``run_source_from_env``) so a
+    URL of one run can never be paired with the number of another. GitHub's
+    run URL carries the run *id*, the token carries the run *number*. If the
+    number is unknown the token is omitted -- a wrong number is worse than
+    none.
     """
+    run = run or {}
+    run_url = str(run.get("html_url") or "")
+    number = str(run.get("run_number") or "").strip()
     link = f'<a href="{escape_html(run_url)}">{escape_html(title)}</a>'
-    line2 = link + (f" ({escape_html(ticket)})" if ticket.strip() else "")
+    line2 = link + (f" (#{escape_html(number)})" if number.isdigit() else "")
     target = (prod_url or "").strip() or run_url
     lines = [
         status_line(conclusion),
@@ -224,9 +238,13 @@ def main(argv: list[str] | None = None) -> int:
     run_id = env.get("RUN_ID", "").strip()
     dry_run = args.dry_run or env.get("DRY_RUN", "").strip().lower() in {"1", "true", "yes"}
 
+    # One source for url+number: the API object of THIS run when available,
+    # otherwise the event payload fields (both from the same event).
     run: dict = {}
     if run_id and repo and github_token:
         run = fetch_run(repo, run_id, github_token)
+    if not run.get("html_url"):
+        run = run_source_from_env(env, repo)
 
     head_commit = (run.get("head_commit") or {}) if isinstance(run.get("head_commit"), dict) else {}
     commit_message = head_commit.get("message") or env.get("HEAD_MESSAGE", "")
@@ -246,13 +264,9 @@ def main(argv: list[str] | None = None) -> int:
         or run.get("name")
         or "GitHub Actions"
     )
-    run_url = (
-        run.get("html_url")
-        or env.get("RUN_URL", "").strip()
-        or (f"https://github.com/{repo}/actions/runs/{run_id}" if repo and run_id else "")
-    )
-    ticket = extract_ticket(commit_message)
     context = resolve_context(env.get("DISPATCH_CONTEXT", ""), commit_message)
+    if not str(run.get("run_number") or "").strip():
+        print("::warning::run_number unavailable; line 2 will omit the (#N) token")
 
     if not chat_id:
         raise SystemExit("TELEGRAM_CHAT_ID is not set")
@@ -262,7 +276,7 @@ def main(argv: list[str] | None = None) -> int:
             "(gh secret set TELEGRAM_BOT_TOKEN)"
         )
 
-    text = build_text(conclusion, title, run_url, ticket=ticket, prod_url=prod_url, context=context)
+    text = build_text(conclusion, title, run, prod_url=prod_url, context=context)
     payload = build_payload(chat_id, thread_id, text)
 
     # Logs are public in this repo: always mask the internal PROD URL.
