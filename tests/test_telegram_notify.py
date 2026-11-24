@@ -204,8 +204,9 @@ def test_line_two_omits_token_when_number_unavailable():
 
 
 def test_url_line_carries_dev_label_with_dev_url():
-    # Owner's shape: "DEV: http://192.168.0.137:7566" -- label, colon,
-    # address. The old literal "URL" label is gone entirely.
+    # Owner's mock shape (pool value, never real infra):
+    # "DEV: http://192.168.0.77:7566" -- label, colon, address. The old
+    # literal "URL" label is gone entirely.
     lines = _text("success", env_label="DEV", env_url=NEUTRAL_DEV_URL).splitlines()
     assert lines[3] == f"DEV: {NEUTRAL_DEV_URL}"
     assert not lines[3].startswith("URL:")
