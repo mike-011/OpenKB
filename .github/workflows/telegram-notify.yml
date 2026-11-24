@@ -61,11 +61,15 @@ jobs:
         with:
           persist-credentials: false
 
-      # TELEGRAM_BOT_TOKEN is a repository secret; never echo it, never pass
-      # it to a step that prints its environment.
+      # TELEGRAM_BOT_TOKEN and TELEGRAM_PROD_URL are repository secrets;
+      # never echo them, never pass them to a step that prints its
+      # environment, and never write their values into the repo (the PROD URL
+      # is a real internal address -- data-hygiene rule). The script masks the
+      # PROD URL in everything it prints.
       - name: Send Telegram notification
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_PROD_URL: ${{ secrets.TELEGRAM_PROD_URL }}
           TELEGRAM_CHAT_ID: "-1003577324021"
           TELEGRAM_THREAD_ID: "2681"
           GITHUB_TOKEN: ${{ github.token }}

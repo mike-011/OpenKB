@@ -12,29 +12,42 @@ behaviour is pinned down by `tests/test_telegram_notify.py`.
 `<`, `&`, quotes; an unescaped `<` would make Telegram reject the whole message).
 
 ```text
-<emoji> <original GitHub conclusion>
-<title as a link to the run> (<run_id>/<run_attempt>)
-URL: <run link>
+<icon> <original GitHub conclusion>
+<title verbatim> (<run URL>) (#ticket)
+<empty line>
+URL: <PROD_URL from secrets.TELEGRAM_PROD_URL, else the run URL>
 [<optional context line>]
 ```
 
-Real shape (example values, `example-org/example-repo` is not this repo):
+Real shape (example values, `example-org/example-repo` and `prod.example.com`
+are NOT this repo — the real PROD address is a secret and never appears in
+files, logs or comments):
 
 ```text
-✅️ success
-Merge pull request #86 from example/branch (https://github.com/example-org/example-repo/actions/runs/1234567890) (1234567890)
-URL: https://github.com/example-org/example-repo/actions/runs/1234567890
+✅ success
+ci: Telegram notifications for every CI run (#101) (https://github.com/example-org/example-repo/actions/runs/1234567890) (#101)
+
+URL: https://prod.example.com
 PROD : https://example.com
 ```
 
-- Line 1: status emoji + the **original GitHub wording** of the conclusion
+- Line 1: status icon + the **original GitHub wording** of the conclusion
   (`success`, `timed_out`, …) — not a translation.
-- Line 2: run/commit title as an HTML `<a href>` link to the run URL (the
-  Markdown link form `[title](url)` adapted to the chosen parse mode), then the
-  run reference `(run_id)` — `(run_id/run_attempt)` when the run was retried.
-- Line 3: literal `URL: ` + the run link. Always present.
-- Optional 4th line: an extra context string (deployment URL etc.), *in
-  addition* to the URL line. Sources, first match wins:
+- Line 2: run title as an HTML `<a href>` link to the run URL (the Markdown
+  link form `[title](url)` adapted to the chosen parse mode), then
+  ` (#ticket)`. Rules:
+  - the title is **verbatim** exactly as GitHub provides it (commit subject or
+    the `title` input) — no prefix stripping, no rewriting (owner correction);
+  - the run number is NOT appended — it already lives inside the URL;
+  - `#ticket` comes from the `Fixes`/`Refs` ref in the commit body, else the
+    first `(#N)` in the subject, else nothing.
+- Line 3: **empty**.
+- Line 4: literal `URL: ` + `<PROD_URL>` from the repository secret
+  `TELEGRAM_PROD_URL`; if that secret is empty, the run URL is used instead.
+  The value is never read into the repo, never printed — logs and dry-run
+  output mask it as `<PROD_URL masked …>`.
+- Optional line 5: an extra context string (deployment URL etc.), appended
+  after the URL line. Sources, first match wins:
   1. `context` input on `workflow_dispatch`;
   2. a `CI-Context:` trailer in the head commit message, e.g.
      `CI-Context: PROD : https://example.com`.
@@ -81,6 +94,10 @@ otherwise each notification would trigger the next one forever.
 - Bot: `@sysadminodua_bot`. Token is **only** in the repository secret
   `TELEGRAM_BOT_TOKEN` (`gh secret set TELEGRAM_BOT_TOKEN`); it is never
   committed, logged, echoed or placed in the payload body.
+- Line-4 target: repository secret `TELEGRAM_PROD_URL` (internal address —
+  data-hygiene rule: never written to any repo file, log or issue comment; the
+  workflow only references `secrets.TELEGRAM_PROD_URL`, and the script masks
+  the value in everything it prints). Empty secret ⇒ run URL fallback.
 - Target `chat_id` / `message_thread_id` are set in the workflow's `env` block
   (values taken from the owner's topic link; example placeholders elsewhere in
   this doc: `-1001234567890`, thread `111`).
@@ -91,11 +108,11 @@ otherwise each notification would trigger the next one forever.
 
 ```bash
 # real send (message_id in the run log = proof of arrival)
-gh workflow run "Telegram notify" --ref ci/telegram-notifications \
+gh workflow run "Telegram notify" --ref main \
   -f fake_conclusion=success -f title="Telegram notify smoke test (#101)"
 
-# failure path / payload only, no Telegram traffic
-gh workflow run "Telegram notify" --ref ci/telegram-notifications \
+# failure path / payload only, no Telegram traffic (PROD URL masked in log)
+gh workflow run "Telegram notify" --ref main \
   -f fake_conclusion=timed_out -f dry_run=true
 
 # unit-style: every conclusion builds a message without crashing
