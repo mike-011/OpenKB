@@ -7,7 +7,7 @@ human-readable Russian phrase (see ``STATUS_MAP``).
 
 Message shape (3 lines, an optional 4th context line):
 
-    <emoji> <original GitHub conclusion text>   e.g.  "🟢 success"
+    <emoji> <original GitHub conclusion text>   e.g.  "✅ success"
     <title as link to the run> (<run_id>/<run_attempt>)
     URL: <run link>
     [<context>]
@@ -33,28 +33,35 @@ GITHUB_API = "https://api.github.com"
 #   CI-Context: PROD : https://example.com
 CONTEXT_TRAILER = "ci-context"
 
-# Conclusion -> status emoji. Covers every conclusion GitHub Actions can
-# report; anything unknown falls back to UNKNOWN_EMOJI (a new conclusion must
-# never crash the notifier). Line 1 always shows the ORIGINAL GitHub wording
-# of the conclusion next to the emoji -- no human translation.
+# Conclusion -> text glyph, mirroring GitHub's own status octicons (Telegram
+# cannot render SVG icons, so the closest Unicode equivalent of each octicon is
+# used). Mapping approved by the owner as FINAL (see #101 / PR #102):
+#   success check-circle-fill -> ✅   failure x-circle-fill     -> ❌
+#   cancelled stop-fill       -> ⏹️   skipped skip-fill         -> ⏭️
+#   timed_out clock           -> ⏰   action_required attention -> ⚠️
+#   neutral grey dot-fill     -> ⚪   stale refresh-ish         -> ♻️
+#   startup_failure x-circle  -> 💥
+# Line 1 always shows the ORIGINAL GitHub wording of the conclusion next to
+# the glyph -- no human translation. Unknown conclusions fall back to
+# UNKNOWN_GLYPH (a new conclusion must never crash the notifier).
 STATUS_MAP: dict[str, str] = {
-    "success": "\U0001f7e2",  # green circle
-    "failure": "\U0001f534",  # red circle
-    "cancelled": "\U0001f535",  # blue circle
-    "skipped": "⚪",  # white circle
-    "neutral": "⬜",  # white square
-    "timed_out": "\U0001f7e0",  # orange circle
-    "action_required": "\U0001f7e1",  # yellow circle (needs attention)
-    "stale": ("\U0001fa76"),  # grey heart
-    "startup_failure": "⛔",  # no entry / blocked
+    "success": "\u2705",  # check-circle-fill
+    "failure": "\u274c",  # x-circle-fill
+    "cancelled": "\u23f9\ufe0f",  # stop-fill / circle-slash
+    "skipped": "\u23ed\ufe0f",  # skip-fill
+    "neutral": "\u26aa",  # grey/white dot-fill
+    "timed_out": "\u23f0",  # clock
+    "action_required": "\u26a0\ufe0f",  # yellow attention
+    "stale": "\u267b\ufe0f",  # refresh (stale) mark
+    "startup_failure": "\U0001f4a5",  # x-circle / boom
 }
-UNKNOWN_EMOJI = "❓"  # anything GitHub adds later
+UNKNOWN_GLYPH = "\u2753"  # anything GitHub adds later
 
 
 def status_line(conclusion: str | None) -> str:
-    """``"failure"`` -> ``"🔴 failure"``; unknown text keeps its own wording."""
+    """``"failure"`` -> ``"❌ failure"``; unknown text keeps its own wording."""
     text = (conclusion or "").strip() or "unknown"
-    emoji = STATUS_MAP.get(text.lower(), UNKNOWN_EMOJI)
+    emoji = STATUS_MAP.get(text.lower(), UNKNOWN_GLYPH)
     return f"{emoji} {text}"
 
 
