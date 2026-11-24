@@ -1,0 +1,79 @@
+name: Telegram notify
+
+# Notifies the owner's Telegram group/topic when a workflow run COMPLETES --
+# for ANY conclusion (success, failure, cancelled, skipped, neutral, timed_out,
+# action_required, stale, startup_failure), always, never silently skipped.
+# Status emoji mapping, message format and setup: docs/telegram-ci-notifications.md
+# Ticket: #101
+#
+# Loop guard: only the "product" workflows are listed below; this workflow's
+# own runs are deliberately NOT a trigger source, otherwise every notification
+# would trigger another notification forever.
+
+on:
+  workflow_run:
+    workflows: ["CI", "Publish to PyPI"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      fake_conclusion:
+        description: "Fake conclusion to test the mapping (e.g. failure, timed_out); empty = real"
+        required: false
+        default: ""
+      title:
+        description: "Override the run title (line 2 text)"
+        required: false
+        default: ""
+      context:
+        description: "Extra context line, e.g. 'PROD : https://example.com'; empty = CI-Context trailer / URL line only"
+        required: false
+        default: ""
+      dry_run:
+        description: "Print the payload instead of sending"
+        type: boolean
+        default: false
+
+# Least-privilege token: read the repo (checkout) and read run metadata
+# (actions/runs/<id>) -- nothing is written by this workflow.
+permissions:
+  contents: read
+  actions: read
+
+# Same grouping pattern as ci.yml (event-scoped, so push/PR/dispatch never
+# collide), keyed on the notifying run itself. Unlike ci.yml this never
+# cancels in progress: a notification must not be dropped because another
+# run finished a second later.
+concurrency:
+  group: telegram-${{ github.event_name }}-${{ github.event.workflow_run.id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
+        with:
+          persist-credentials: false
+
+      # TELEGRAM_BOT_TOKEN is a repository secret; never echo it, never pass
+      # it to a step that prints its environment.
+      - name: Send Telegram notification
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: "-1003577324021"
+          TELEGRAM_THREAD_ID: "2681"
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id || github.run_id }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          DISPLAY_TITLE: ${{ github.event.workflow_run.display_title }}
+          HEAD_MESSAGE: ${{ github.event.workflow_run.head_commit.message }}
+          DISPATCH_CONCLUSION: ${{ inputs.fake_conclusion }}
+          TITLE: ${{ inputs.title }}
+          DISPATCH_CONTEXT: ${{ inputs.context }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/telegram_notify.py
