@@ -14,3 +14,4 @@
 !local-llm/**/
 !local-llm/**/*.md
 !local-llm/**/*.json
+!i18n-review-checklist.md
