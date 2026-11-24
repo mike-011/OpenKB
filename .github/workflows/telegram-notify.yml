@@ -9,7 +9,14 @@ name: Telegram notify
 #   skipped           -> ⏭️   timed_out         -> ⏰   action_required -> ⚠️
 #   neutral           -> ⚪   stale             -> ♻️   startup_failure -> 💥
 #   anything unknown  -> ❓ (raw text kept, never crashes, never suppressed)
-# Line 4 = environment label + address: "DEV: <dev URL>" for every build;
+# Line 2 title: verbatim except GitHub's trailing squash-merge suffix -- a
+# trailing " (#<digits>)" token at the END is stripped until none remain.
+# PR block (round 4): after the empty line, one "PR #N" line per pull request
+# of the run's commits (GitHub API /repos/{repo}/commits/{sha}/pulls per
+# commit -- payload commits if present, else head_sha -- deduped, sorted
+# ascending), then a second empty line; with no PRs the block and its
+# separator are omitted entirely.
+# Env line = environment label + address: "DEV: <dev URL>" for every build;
 # "PROD: <prod URL>" only for a release build (version tag ref) AND when a
 # prod URL secret exists -- with TELEGRAM_PROD_URL deleted and no v0.6.0 tag
 # the PROD branch is currently impossible to reach. The addresses are private:
@@ -93,6 +100,10 @@ jobs:
           # workflow_run fields for trigger runs, this dispatch run's own
           # id/number for workflow_dispatch tests. Never mix the two.
           RUN_ID: ${{ github.event.workflow_run.id || github.run_id }}
+          # PR block source (round 4): the triggering run's head commit when
+          # the payload carries no commits list, else this run's own sha --
+          # the script then calls /repos/{repo}/commits/{sha}/pulls per sha.
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
           RUN_URL: ${{ github.event.workflow_run.html_url }}
           RUN_NUMBER: ${{ github.event.workflow_run.run_number || github.run_number }}
           CONCLUSION: ${{ github.event.workflow_run.conclusion }}

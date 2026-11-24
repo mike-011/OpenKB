@@ -3,13 +3,20 @@
 Loaded straight from ``.github/scripts/telegram_notify.py`` (it is tooling,
 not package code) so the exact file the workflow runs is what gets tested.
 
-Message shape (owner-corrected format, third round = environment label):
+Message shape (owner-final format, fourth round = PR-suffix strip + PR block):
 
     <icon> <original GitHub conclusion>
-    <title verbatim> (<run URL>) (#<run number of that very run>)
+    <title minus trailing GitHub PR-suffix tokens> (<run URL>) (#<run number>)
+    <empty line>
+    PR #<n1>
+    PR #<n2>
     <empty line>
     <DEV|PROD>: <environment URL, else the run URL>
     [<optional context line>]
+
+When NO pull request is associated with the run's commits, the PR block and
+its separating empty line are BOTH omitted -- the message keeps the round-3
+shape: title line, empty line, env line (then the optional context line).
 
 Line 2 consistency rule: ``html_url`` and ``run_number`` must come from the
 SAME run payload -- GitHub's run URL carries the run *id* while the token
@@ -17,7 +24,23 @@ carries the run *number* (they are different values by design), so the only
 possible bug class is mixing two runs; ``build_text`` therefore accepts a
 single ``run`` mapping and reads both fields from it.
 
-Line 4 rules (round 3): the label is ``DEV`` or ``PROD`` (the old literal
+Title rule (round 4): verbatim exactly as GitHub provides it (commit subject
+or the ``title`` input) with ONE named exception -- GitHub's squash-merge
+suffix, a trailing `` (#<digits>)`` token, is removed from the END of the
+title repeatedly until none remain (``fix(test): something (#107)`` ->
+``fix(test): something``; ``foo (#107) (#108)`` -> ``foo``). No other
+prefix, substring or character count is involved. The `` (#<run number>)``
+token appended at the END of line 2 stays as round 3.
+
+PR block rules (round 4): one line per pull request associated with the
+run's commits, formatted exactly ``PR #N`` (hash, decimal, no link, no
+punctuation). Source: GitHub API ``GET /repos/{repo}/commits/{sha}/pulls``
+(``Accept: application/vnd.github+json``) for each commit of the run --
+the payload's commits when present, else the run's ``head_sha`` commit --
+deduped by number and sorted ascending. A second empty line always separates
+the block from the env line (mandatory while the block exists).
+
+Env-line rules (round 3, unchanged): the label is ``DEV`` or ``PROD`` (the old literal
 ``URL`` label is gone). ``PROD`` is double-gated -- a release build (version
 tag ref starting with ``v``) AND a non-empty prod URL secret -- and with
 ``TELEGRAM_PROD_URL`` deliberately deleted from the repo it is unreachable
@@ -28,6 +51,7 @@ logs, so everything printed must mask it (see the ``main()`` masking test).
 """
 
 import importlib.util
+import json
 import re
 from pathlib import Path
 
@@ -131,20 +155,58 @@ def test_unknown_conclusion_uses_fallback_and_never_crashes():
 # ------------------------------------------------------------------- title
 
 
-def test_title_is_verbatim_no_prefix_stripping():
-    # Owner correction: the "ci: " prefix was stripped ACCIDENTALLY before;
-    # the title goes exactly as GitHub provides it -- never rewritten.
+def test_title_is_verbatim_except_the_trailing_pr_suffix():
+    # Owner correction (rounds 2/4): the "ci: " prefix was stripped
+    # ACCIDENTALLY before; the title goes exactly as GitHub provides it --
+    # the ONE named exception is GitHub's trailing squash-merge PR suffix
+    # pinned down by the next two tests. Never rewritten, never cut to a
+    # fixed character count.
     for raw in (
         "ci: Telegram notify",
         "fix(web): connector cards",
         "feat(api)!: breaking change",
         "Merge pull request #86 from example/branch",
-        SUBJECT,
+        "ci: Telegram notify (see #101)",
     ):
         lines = tn.build_text("success", raw, RUN).splitlines()
         assert tn.escape_html(raw) in lines[1]
     assert tn.build_text("success", "", RUN).splitlines()[1].startswith("<a href=")
     assert tn.build_text("success", None, RUN).splitlines()[1].startswith("<a href=")
+
+
+def test_title_drops_trailing_github_pr_suffix_tokens_repeatedly():
+    # Round-4 owner rule: GitHub's squash-merge suffix -- a trailing
+    # " (#<digits>)" token at the END of the title -- is removed until none
+    # remain. The title lives inside line 2's link text.
+    cases = {
+        "fix(test): something (#107)": "fix(test): something",
+        "foo (#107) (#108)": "foo",
+        SUBJECT: f"ci: {_TITLE_BODY}",
+        "plain subject (#7)": "plain subject",
+        "#107": "#107",  # no space+paren token at the end -- untouched
+    }
+    for raw, expected in cases.items():
+        line = tn.build_text("success", raw, RUN).splitlines()[1]
+        assert f">{tn.escape_html(expected)}</a>" in line, raw
+        # only the title is stripped: line 2 still ends with THIS run's number
+        assert line.endswith(" (#100)")
+
+
+def test_title_keeps_everything_that_is_not_a_trailing_pr_suffix():
+    # Named-pattern strip ONLY: interior tokens, non-digit tokens and
+    # prefixes all survive -- no blind prefix/substring cutting.
+    keep = [
+        "Merge pull request #86 from example/branch",
+        "(#107)",  # token must be preceded by a space
+        "fix (#abc)",  # not digits
+        "release (#v1)",  # not digits
+        "feat (#107) and a trailing word",  # not at the END
+        "ci: Telegram notify (see #101)",  # not a bare (#digits) token
+        "x" * 400 + " tail",  # long titles are never truncated
+    ]
+    for raw in keep:
+        line = tn.build_text("success", raw, RUN).splitlines()[1]
+        assert f">{tn.escape_html(raw)}</a>" in line, raw
 
 
 # ------------------------------------------------------------- message shape
@@ -160,12 +222,14 @@ def test_message_is_four_lines_with_an_empty_third_line():
 def test_line_two_is_title_link_then_run_number_token():
     lines = _text("failure", title=SUBJECT).splitlines()
     line2 = lines[1]
-    assert line2.startswith(f'<a href="{NEUTRAL_RUN_URL}">{tn.escape_html(SUBJECT)}</a>')
-    # run-number token, GitHub style: (#<run_number>)
+    # round 4: the subject's trailing GitHub PR-suffix tokens are stripped ...
+    assert line2.startswith(
+        f'<a href="{NEUTRAL_RUN_URL}">{tn.escape_html(f"ci: {_TITLE_BODY}")}</a>'
+    )
+    assert "(#101)" not in line2 and "(#102)" not in line2
+    # ... while the prefix stays and line 2 still ends with THIS run's number
     assert line2.endswith(" (#100)")
-    # title verbatim: prefix and the subject's own (#N) refs stay untouched
     assert "ci: Telegram" in line2
-    assert "(#102)" in line2
     # no big run-id suffix
     assert "(1234567890)" not in line2
 
@@ -198,6 +262,77 @@ def test_line_two_omits_token_when_number_unavailable():
     assert lines[1] == '<a href="https://x.example/runs/7">plain subject</a>'
     # nothing at all is appended -- a wrong number is worse than none
     assert "(#" not in lines[1]
+
+
+# ------------------------------------------------------- PR block (round 4)
+
+
+def test_pr_block_sits_between_title_and_env_line():
+    lines = tn.build_text(
+        "success",
+        "ci: thing",
+        RUN,
+        env_label="DEV",
+        env_url=NEUTRAL_DEV_URL,
+        prs=[101, 107],
+    ).splitlines()
+    assert lines[0] == "\u2705 success"
+    assert lines[1].startswith("<a href=")
+    assert lines[2] == "", "the title line is still followed by one empty line"
+    assert lines[3] == "PR #101"
+    assert lines[4] == "PR #107"
+    assert lines[5] == "", "a second empty line separates block from env line"
+    assert lines[6] == f"DEV: {NEUTRAL_DEV_URL}"
+    assert len(lines) == 7
+
+
+def test_pr_block_is_deduped_and_sorted_ascending():
+    lines = _text("success", prs=[107, 7, 107, 102]).splitlines()
+    assert [line for line in lines if line.startswith("PR #")] == [
+        "PR #7",
+        "PR #102",
+        "PR #107",
+    ]
+
+
+def test_pr_line_format_is_hash_decimal_no_link_no_punctuation():
+    for number in (1, 105, 12345):
+        lines = tn.build_text(
+            "success", "t", RUN, env_url=NEUTRAL_DEV_URL, prs=[number]
+        ).splitlines()
+        line = lines[3]
+        assert line == f"PR #{number}"
+        assert re.fullmatch(r"PR #[0-9]+", line)
+        assert "<a" not in line and "http" not in line
+        assert not re.search(r"[.,;:]$", line)
+
+
+def test_no_prs_omits_the_block_and_its_empty_line():
+    # Round-4 rule: with no PRs the message is exactly line2, empty, env.
+    for prs in ([], None):
+        lines = tn.build_text(
+            "success", "t", RUN, env_label="DEV", env_url=NEUTRAL_DEV_URL, prs=prs
+        ).splitlines()
+        assert len(lines) == 4, prs
+        assert lines[2] == ""
+        assert lines[3] == f"DEV: {NEUTRAL_DEV_URL}"
+        assert not any(line.startswith("PR #") for line in lines)
+
+
+def test_context_line_follows_the_env_line_with_a_pr_block():
+    lines = tn.build_text(
+        "success",
+        "t",
+        RUN,
+        env_label="DEV",
+        env_url=NEUTRAL_DEV_URL,
+        context="PROD : https://example.com",
+        prs=[3],
+    ).splitlines()
+    assert lines[3] == "PR #3"
+    assert lines[4] == ""
+    assert lines[5] == f"DEV: {NEUTRAL_DEV_URL}"
+    assert lines[6] == "PROD : https://example.com"
 
 
 # --------------------------------------------------- environment label (line 4)
@@ -463,3 +598,125 @@ def test_run_source_from_env_never_mixes_runs():
     assert dispatch["html_url"].endswith("/runs/222")
     line = tn.build_text("success", "t", dispatch).splitlines()[1]
     assert _url_run_id(line) == "222" and _printed_number(line) == "101"
+
+
+# ------------------------------------------------- PR list source (round 4)
+
+
+class _FakeResponse:
+    """Minimal urllib response stand-in returning canned JSON."""
+
+    def __init__(self, payload):
+        self._payload = payload
+
+    def read(self):
+        return json.dumps(self._payload).encode("utf-8")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+def test_commit_sha_source_is_payload_commits_else_head_sha():
+    # workflow_run payload commits when present (deduped, order kept) ...
+    payload = {"commits": [{"sha": "aaa"}, {"sha": "bbb"}, {"sha": "aaa"}]}
+    assert tn.collect_commit_shas(payload, {}) == ["aaa", "bbb"]
+    # ... else the run's head_sha commit (run object first, env fallback)
+    assert tn.collect_commit_shas({"head_sha": "ccc"}, {"HEAD_SHA": "wrong"}) == ["ccc"]
+    assert tn.collect_commit_shas({}, {"HEAD_SHA": "ddd"}) == ["ddd"]
+    assert tn.collect_commit_shas({}, {}) == []
+
+
+def test_fetch_pr_numbers_calls_commits_pulls_per_commit(monkeypatch):
+    answers = {
+        "aaa": [{"number": 105}, {"number": 102}],
+        "bbb": [{"number": 102}, {"number": 7}],
+    }
+    requests: list = []
+
+    def fake_urlopen(request, timeout=None):
+        requests.append(request)
+        sha = request.full_url.split("/commits/")[1].split("/")[0]
+        return _FakeResponse(answers[sha])
+
+    monkeypatch.setattr(tn.urllib.request, "urlopen", fake_urlopen)
+    numbers = tn.fetch_pr_numbers("example-org/example-repo", ["aaa", "bbb"], "fake-token")
+    # deduped across commits, sorted ascending
+    assert numbers == [7, 102, 105]
+    # one GET per commit at /repos/{repo}/commits/{sha}/pulls
+    assert sorted(r.full_url for r in requests) == [
+        "https://api.github.com/repos/example-org/example-repo/commits/aaa/pulls",
+        "https://api.github.com/repos/example-org/example-repo/commits/bbb/pulls",
+    ]
+    for request in requests:
+        headers = {
+            key.lower(): value
+            for key, value in {
+                **request.headers,
+                **getattr(request, "unredirected_hdrs", {}),
+            }.items()
+        }
+        assert headers["accept"] == "application/vnd.github+json"
+        assert headers["authorization"].startswith("Bearer ")
+
+
+def test_fetch_pr_numbers_degrades_to_empty_when_the_api_fails(monkeypatch):
+    def boom(request, timeout=None):
+        raise tn.urllib.error.HTTPError(request.full_url, 404, "Not Found", None, None)
+
+    monkeypatch.setattr(tn.urllib.request, "urlopen", boom)
+    # a failed lookup must never crash a notification: no PR block instead
+    assert tn.fetch_pr_numbers("example-org/example-repo", ["aaa"], "fake-token") == []
+
+
+def test_main_builds_the_pr_block_from_the_api(monkeypatch, capsys):
+    """Round-4 wiring: main() feeds deduped/sorted PR numbers into the message."""
+    sent: list[dict] = []
+
+    def fake_send(payload: dict, token: str) -> dict:
+        sent.append(payload)
+        return {"result": {"message_id": 77}}
+
+    def fake_fetch_pr_numbers(repo, shas, token):
+        assert repo == "example-org/example-repo"
+        assert shas == ["abc123"]  # no payload commits -> head_sha
+        return [107, 3, 107]
+
+    monkeypatch.setattr(tn, "send", fake_send)
+    monkeypatch.setattr(tn, "fetch_pr_numbers", fake_fetch_pr_numbers)
+    monkeypatch.setattr(tn, "fetch_run", lambda repo, run_id, token: {})
+    for name in (
+        "DRY_RUN",
+        "TELEGRAM_PROD_URL",
+        "DISPATCH_CONTEXT",
+        "TITLE",
+        "HEAD_MESSAGE",
+        "DISPLAY_TITLE",
+        "GITHUB_REF",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("GITHUB_TOKEN", "fake-token")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "000000:fake-token-for-tests")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "-1001234567890")
+    monkeypatch.setenv("TELEGRAM_THREAD_ID", "111")
+    monkeypatch.setenv("TELEGRAM_DEV_URL", NEUTRAL_DEV_URL)
+    monkeypatch.setenv("GITHUB_REPOSITORY", "example-org/example-repo")
+    monkeypatch.setenv("BUILD_REF", "refs/heads/main")
+    monkeypatch.setenv("RUN_ID", "1234567890")
+    monkeypatch.setenv("RUN_URL", NEUTRAL_RUN_URL)
+    monkeypatch.setenv("RUN_NUMBER", "100")
+    monkeypatch.setenv("DISPATCH_CONCLUSION", "success")
+    monkeypatch.setenv("HEAD_SHA", "abc123")
+
+    assert tn.main([]) == 0
+    lines = sent[0]["text"].splitlines()
+    assert lines[3] == "PR #3"
+    assert lines[4] == "PR #107"
+    assert lines[5] == ""
+    assert lines[6] == f"DEV: {NEUTRAL_DEV_URL}"
+    # CI logs still never show the environment address
+    out = capsys.readouterr().out
+    assert NEUTRAL_DEV_URL not in out
+    assert tn.REDACTED in out
