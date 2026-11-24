@@ -9,6 +9,12 @@ name: Telegram notify
 #   skipped           -> ⏭️   timed_out         -> ⏰   action_required -> ⚠️
 #   neutral           -> ⚪   stale             -> ♻️   startup_failure -> 💥
 #   anything unknown  -> ❓ (raw text kept, never crashes, never suppressed)
+# Line 4 = environment label + address: "DEV: <dev URL>" for every build;
+# "PROD: <prod URL>" only for a release build (version tag ref) AND when a
+# prod URL secret exists -- with TELEGRAM_PROD_URL deleted and no v0.6.0 tag
+# the PROD branch is currently impossible to reach. The addresses are private:
+# only secrets.<NAME> names appear here, values are masked in every printed
+# byte by the script (logs are public).
 # Message format and setup: docs/telegram-ci-notifications.md
 # Ticket: #101
 #
@@ -61,19 +67,28 @@ jobs:
         with:
           persist-credentials: false
 
-      # TELEGRAM_BOT_TOKEN and TELEGRAM_PROD_URL are repository secrets;
-      # never echo them, never pass them to a step that prints its
-      # environment, and never write their values into the repo (the PROD URL
-      # is a real internal address -- data-hygiene rule). The script masks the
-      # PROD URL in everything it prints.
+      # TELEGRAM_BOT_TOKEN, TELEGRAM_DEV_URL and TELEGRAM_PROD_URL are
+      # referenced ONLY through the secrets context -- never echo them, never
+      # pass them to a step that prints its environment, and never write their
+      # values into the repo (the dev URL is a real internal LAN address --
+      # data-hygiene rule: it may exist only in the secret and in the message
+      # text sent to the private chat). The script masks every environment URL
+      # in everything it prints, so the public logs only ever show the mask.
+      # TELEGRAM_PROD_URL has no value on purpose (deleted; no release yet) --
+      # the empty value is what keeps the PROD label unreachable.
       - name: Send Telegram notification
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_DEV_URL: ${{ secrets.TELEGRAM_DEV_URL }}
           TELEGRAM_PROD_URL: ${{ secrets.TELEGRAM_PROD_URL }}
           TELEGRAM_CHAT_ID: "-1003577324021"
           TELEGRAM_THREAD_ID: "2681"
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          # Release gate for the PROD label: the triggering build's branch /
+          # tag name first, else this run's own ref -- only a version tag
+          # (refs/tags/v…) counts as a release build.
+          BUILD_REF: ${{ github.event.workflow_run.head_branch || github.ref }}
           # url + number MUST come from the same run payload (line-2 rule):
           # workflow_run fields for trigger runs, this dispatch run's own
           # id/number for workflow_dispatch tests. Never mix the two.

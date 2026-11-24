@@ -10,8 +10,17 @@ Message shape (owner-corrected format, supersedes the earlier one):
     <icon> <original GitHub conclusion>            e.g.  "✅ success"
     <title verbatim> (<run URL>) (#<run number>)
     <empty line>
-    URL: <PROD_URL from secrets.TELEGRAM_PROD_URL, else the run URL>
+    <DEV|PROD>: <environment URL, else the run URL>
     [<optional context line>]
+
+Line 4 = the environment label, a colon and the address (the old literal
+``URL`` label is gone). Two labels exist: ``DEV`` for dev builds and ``PROD``
+for release builds (``PROD: http://ip.ad.dr.es:7566`` shape). ``PROD`` is
+double-gated by ``resolve_environment`` -- BOTH a release build (version tag
+ref starting with ``v``) AND a non-empty prod URL secret are required -- so
+with ``TELEGRAM_PROD_URL`` deliberately absent from the repo no run can select
+it yet: every build reports ``DEV`` with ``secrets.TELEGRAM_DEV_URL``, and an
+empty dev secret falls back to the run URL.
 
 Line 2 rules: the title goes VERBATIM exactly as GitHub provides it (commit
 subject or the ``title`` input -- no prefix stripping, no rewriting); the
@@ -21,9 +30,15 @@ must be the run number OF THE VERY RUN the URL points to -- ``html_url`` and
 the fetched run object), never mixed across runs. Unknown number -> token
 omitted rather than guessed.
 
-Secrets: ``TELEGRAM_BOT_TOKEN`` (auth) and ``TELEGRAM_PROD_URL`` (line 4) are
-repository secrets -- never printed, logged, committed or put in the repo.
-Printed output (dry-run payload, message preview) always masks the PROD URL.
+Secrets: ``TELEGRAM_BOT_TOKEN`` (auth), ``TELEGRAM_DEV_URL`` (line 4, dev
+address) and ``TELEGRAM_PROD_URL`` (line 4, release address -- name kept for
+the gate, no such secret exists yet) are repository secrets -- never printed,
+logged, committed or put in the repo. The environment URL is a private LAN
+address: it may exist ONLY in the secret value and in the Telegram message
+text sent to the private chat, never in repo files, issue/PR bodies or
+comments, commit messages or CI logs. Every printed byte (preview, dry-run
+payload) therefore masks it via ``redact`` -- see
+``test_printed_output_masks_env_url_while_payload_carries_it``.
 """
 
 from __future__ import annotations
@@ -32,6 +47,7 @@ import argparse
 import html
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -44,7 +60,17 @@ GITHUB_API = "https://api.github.com"
 #   CI-Context: PROD : https://example.com
 CONTEXT_TRAILER = "ci-context"
 
-REDACTED = "<PROD_URL masked: real infra identifiers never appear in logs>"
+REDACTED = "<ENV URL masked: real infra identifiers never appear in logs>"
+
+# Line-4 environment labels. DEV = every build; PROD = release builds only,
+# and only when a prod URL secret exists (see resolve_environment).
+DEV_LABEL = "DEV"
+PROD_LABEL = "PROD"
+
+# A release build = the ref is a version tag: "refs/tags/v0.6.0" (Actions'
+# GITHUB_REF form) or the bare tag name "v0.6.0". Everything else -- branches,
+# pull refs, non-version tags -- is a dev build.
+RELEASE_REF_RE = re.compile(r"^(?:refs/tags/)?v\d")
 
 # Conclusion -> text glyph, mirroring GitHub's own status octicons (Telegram
 # cannot render SVG icons, so the closest Unicode equivalent of each octicon is
@@ -101,12 +127,39 @@ def context_from_commit(message: str | None) -> str:
     return ""
 
 
-def redact(text: str, secret_value: str) -> str:
-    """Mask the internal PROD URL in anything that gets printed or logged."""
-    value = (secret_value or "").strip()
-    if not value:
-        return text
-    return text.replace(value, REDACTED)
+def is_release_ref(ref: str | None) -> bool:
+    """True only for a version tag ref (``refs/tags/v…`` / bare ``v…``)."""
+    return bool(RELEASE_REF_RE.match((ref or "").strip()))
+
+
+def resolve_environment(
+    ref: str,
+    dev_url: str,
+    prod_url: str,
+    run_url: str = "",
+) -> tuple[str, str]:
+    """Line-4 ``(label, address)`` for this build.
+
+    ``PROD`` requires BOTH conditions at once: a release build (version tag
+    ref) AND a non-empty prod URL secret. No prod secret exists yet (the old
+    ``TELEGRAM_PROD_URL`` was deliberately deleted, there is no v0.6.0), so
+    the PROD branch is currently impossible to reach -- every build resolves
+    to ``DEV``. With an empty dev secret the address falls back to the run
+    URL rather than printing nothing.
+    """
+    prod = (prod_url or "").strip()
+    if prod and is_release_ref(ref):
+        return PROD_LABEL, prod
+    return DEV_LABEL, (dev_url or "").strip() or (run_url or "").strip()
+
+
+def redact(text: str, *secret_values: str) -> str:
+    """Mask every environment URL in anything that gets printed or logged."""
+    for secret_value in secret_values:
+        value = (secret_value or "").strip()
+        if value:
+            text = text.replace(value, REDACTED)
+    return text
 
 
 def run_source_from_env(env: Mapping[str, str], repo: str) -> dict:
@@ -132,7 +185,8 @@ def build_text(
     conclusion: str | None,
     title: str,
     run: dict | None = None,
-    prod_url: str = "",
+    env_label: str = "",
+    env_url: str = "",
     context: str = "",
 ) -> str:
     """Compose the 4 (+optional 5) line HTML message of the corrected format.
@@ -146,18 +200,24 @@ def build_text(
     run URL carries the run *id*, the token carries the run *number*. If the
     number is unknown the token is omitted -- a wrong number is worse than
     none.
+
+    Line 4 = ``<DEV|PROD>: <address>`` -- the label comes from
+    ``resolve_environment`` (never the old literal ``URL``; a missing label
+    still defaults to ``DEV``), the address from ``env_url`` with the run URL
+    as fallback when the secret is empty.
     """
     run = run or {}
     run_url = str(run.get("html_url") or "")
     number = str(run.get("run_number") or "").strip()
     link = f'<a href="{escape_html(run_url)}">{escape_html(title)}</a>'
     line2 = link + (f" (#{escape_html(number)})" if number.isdigit() else "")
-    target = (prod_url or "").strip() or run_url
+    label = (env_label or "").strip() or DEV_LABEL
+    target = (env_url or "").strip() or run_url
     lines = [
         status_line(conclusion),
         line2,
         "",
-        f"URL: {escape_html(target)}",
+        f"{label}: {escape_html(target)}",
     ]
     if context:
         lines.append(escape_html(context))
@@ -232,7 +292,12 @@ def main(argv: list[str] | None = None) -> int:
     token = env.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = env.get("TELEGRAM_CHAT_ID", "").strip()
     thread_id = env.get("TELEGRAM_THREAD_ID", "").strip()
+    dev_url = env.get("TELEGRAM_DEV_URL", "").strip()
     prod_url = env.get("TELEGRAM_PROD_URL", "").strip()
+    # Release detection: the triggering build's ref (tag) when available,
+    # else this workflow run's own ref. Only a version tag counts -- see
+    # is_release_ref.
+    build_ref = env.get("BUILD_REF", "").strip() or env.get("GITHUB_REF", "").strip()
     repo = env.get("GITHUB_REPOSITORY", "").strip()
     github_token = env.get("GITHUB_TOKEN", "").strip()
     run_id = env.get("RUN_ID", "").strip()
@@ -276,15 +341,20 @@ def main(argv: list[str] | None = None) -> int:
             "(gh secret set TELEGRAM_BOT_TOKEN)"
         )
 
-    text = build_text(conclusion, title, run, prod_url=prod_url, context=context)
+    # Label + address for line 4, from ONE decision point (double gate).
+    run_url = str(run.get("html_url") or "")
+    env_label, env_address = resolve_environment(build_ref, dev_url, prod_url, run_url)
+    text = build_text(
+        conclusion, title, run, env_label=env_label, env_url=env_address, context=context
+    )
     payload = build_payload(chat_id, thread_id, text)
 
-    # Logs are public in this repo: always mask the internal PROD URL.
-    print("message preview (PROD URL masked):")
-    print(redact(text, prod_url))
+    # Logs are public in this repo: never let the environment URL reach them.
+    print("message preview (environment URL masked):")
+    print(redact(text, dev_url, prod_url))
 
     if dry_run:
-        safe_payload = dict(payload, text=redact(payload["text"], prod_url))
+        safe_payload = dict(payload, text=redact(payload["text"], dev_url, prod_url))
         print(json.dumps(safe_payload, ensure_ascii=False, indent=2))
         print("dry-run: payload printed, nothing sent")
         return 0

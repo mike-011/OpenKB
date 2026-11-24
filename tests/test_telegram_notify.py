@@ -3,12 +3,12 @@
 Loaded straight from ``.github/scripts/telegram_notify.py`` (it is tooling,
 not package code) so the exact file the workflow runs is what gets tested.
 
-Message shape (owner-corrected format):
+Message shape (owner-corrected format, third round = environment label):
 
     <icon> <original GitHub conclusion>
     <title verbatim> (<run URL>) (#<run number of that very run>)
     <empty line>
-    URL: <PROD_URL or run URL>
+    <DEV|PROD>: <environment URL, else the run URL>
     [<optional context line>]
 
 Line 2 consistency rule: ``html_url`` and ``run_number`` must come from the
@@ -16,6 +16,15 @@ SAME run payload -- GitHub's run URL carries the run *id* while the token
 carries the run *number* (they are different values by design), so the only
 possible bug class is mixing two runs; ``build_text`` therefore accepts a
 single ``run`` mapping and reads both fields from it.
+
+Line 4 rules (round 3): the label is ``DEV`` or ``PROD`` (the old literal
+``URL`` label is gone). ``PROD`` is double-gated -- a release build (version
+tag ref starting with ``v``) AND a non-empty prod URL secret -- and with
+``TELEGRAM_PROD_URL`` deliberately deleted from the repo it is unreachable
+today: every build reports ``DEV``. The dev address is a private LAN value:
+it may live only in the repository secret and in the Telegram message to the
+private chat, never in repo files, ticket/PR text, commit messages or CI
+logs, so everything printed must mask it (see the ``main()`` masking test).
 """
 
 import importlib.util
@@ -61,6 +70,9 @@ RUN = {
     "run_number": 100,
 }
 NEUTRAL_RUN_URL = RUN["html_url"]
+# Fixture values come from the approved fake pools (LAN = 192.168.0.0/24,
+# fictional domains) -- never this repo's real infrastructure.
+NEUTRAL_DEV_URL = "http://192.168.0.77:7566"
 NEUTRAL_PROD_URL = "https://prod.example.com"
 _TITLE_BODY = "Telegram-уведомления о завершении прогонов"
 SUBJECT = f"ci: {_TITLE_BODY} (#101) (#102)"
@@ -70,7 +82,8 @@ def _text(conclusion: str, **kwargs) -> str:
     params = {
         "title": SUBJECT,
         "run": RUN,
-        "prod_url": NEUTRAL_PROD_URL,
+        "env_label": "DEV",
+        "env_url": NEUTRAL_DEV_URL,
     }
     params.update(kwargs)
     return tn.build_text(conclusion, **params)
@@ -187,22 +200,103 @@ def test_line_two_omits_token_when_number_unavailable():
     assert "(#" not in lines[1]
 
 
-def test_url_line_uses_prod_url():
-    lines = _text("success", prod_url="https://prod.example.com/path").splitlines()
-    assert lines[3] == "URL: https://prod.example.com/path"
+# --------------------------------------------------- environment label (line 4)
 
 
-def test_url_line_falls_back_to_run_url_when_prod_url_missing():
+def test_url_line_carries_dev_label_with_dev_url():
+    # Owner's shape: "DEV: http://192.168.0.137:7566" -- label, colon,
+    # address. The old literal "URL" label is gone entirely.
+    lines = _text("success", env_label="DEV", env_url=NEUTRAL_DEV_URL).splitlines()
+    assert lines[3] == f"DEV: {NEUTRAL_DEV_URL}"
+    assert not lines[3].startswith("URL:")
+
+
+def test_url_line_falls_back_to_run_url_when_dev_secret_empty():
     for missing in ("", "   "):
-        lines = _text("success", prod_url=missing).splitlines()
-        assert lines[3] == f"URL: {NEUTRAL_RUN_URL}"
+        lines = _text("success", env_label="DEV", env_url=missing).splitlines()
+        assert lines[3] == f"DEV: {NEUTRAL_RUN_URL}"
+
+
+def test_url_line_defaults_to_dev_label_when_label_missing():
+    # A missing label must never fall back to the old "URL" placeholder.
+    lines = tn.build_text("success", "t", RUN, env_url=NEUTRAL_DEV_URL).splitlines()
+    assert lines[3] == f"DEV: {NEUTRAL_DEV_URL}"
+
+
+def test_prod_label_requires_release_ref_and_prod_secret():
+    release_ref = "refs/tags/v0.6.0"
+    branch_ref = "refs/heads/main"
+
+    # both conditions -> PROD (the only way to get it)
+    label, url = tn.resolve_environment(release_ref, NEUTRAL_DEV_URL, NEUTRAL_PROD_URL)
+    assert (label, url) == ("PROD", NEUTRAL_PROD_URL)
+
+    # release build but no prod secret -> DEV with the dev URL
+    assert tn.resolve_environment(release_ref, NEUTRAL_DEV_URL, "") == (
+        "DEV",
+        NEUTRAL_DEV_URL,
+    )
+
+    # prod secret present but not a release build -> still DEV
+    assert tn.resolve_environment(branch_ref, NEUTRAL_DEV_URL, NEUTRAL_PROD_URL) == (
+        "DEV",
+        NEUTRAL_DEV_URL,
+    )
+
+    # neither -> DEV
+    assert tn.resolve_environment(branch_ref, NEUTRAL_DEV_URL, "") == (
+        "DEV",
+        NEUTRAL_DEV_URL,
+    )
+
+
+def test_prod_is_impossible_without_the_prod_secret():
+    # There is no v0.6.0 release and TELEGRAM_PROD_URL was deleted: with an
+    # empty prod secret NO ref can ever select PROD.
+    refs = [
+        "refs/tags/v0.6.0",
+        "v0.6.0",
+        "refs/tags/v1.0.0",
+        "refs/heads/main",
+        "refs/heads/fix/ci-notify-env-line",
+        "refs/pull/105/merge",
+        "",
+    ]
+    for ref in refs:
+        label, url = tn.resolve_environment(ref, NEUTRAL_DEV_URL, "")
+        assert label == "DEV", ref
+        assert url == NEUTRAL_DEV_URL, ref
+        built = tn.build_text("success", "t", RUN, env_label=label, env_url=url)
+        assert built.splitlines()[3].startswith("DEV: "), ref
+
+
+def test_release_ref_detection_is_version_tags_only():
+    release = ["refs/tags/v0.6.0", "refs/tags/v1", "v0.6.0", "v1.0.0-rc1"]
+    not_release = [
+        "refs/heads/main",
+        "refs/tags/0.6.0",
+        "refs/tags/rc1",
+        "refs/tags/v",
+        "refs/tags/versioning",
+        "refs/heads/v2-experiment",
+        "",
+    ]
+    for ref in release:
+        assert tn.is_release_ref(ref), ref
+    for ref in not_release:
+        assert not tn.is_release_ref(ref), ref
+
+
+def test_dev_secret_empty_falls_back_to_run_url_through_resolve():
+    label, url = tn.resolve_environment("refs/heads/main", "", "", NEUTRAL_RUN_URL)
+    assert (label, url) == ("DEV", NEUTRAL_RUN_URL)
 
 
 def test_context_line_is_appended_after_the_url_line():
     assert len(_text("success").splitlines()) == 4
     lines = _text("success", context="PROD : https://example.com").splitlines()
     assert len(lines) == 5
-    assert lines[3].startswith("URL: ")
+    assert lines[3].startswith("DEV: ")
     assert lines[4] == "PROD : https://example.com"
 
 
@@ -212,11 +306,11 @@ def test_every_conclusion_builds_a_message_without_crashing():
         assert len(lines) == 4
         assert lines[0] == f"{tn.STATUS_MAP[conclusion]} {conclusion}"
         assert lines[2] == ""
-        assert lines[3].startswith("URL: ")
+        assert lines[3].startswith("DEV: ")
 
 
 def test_empty_and_none_conclusion_are_handled():
-    lines = tn.build_text(None, "t", RUN, prod_url="").splitlines()
+    lines = tn.build_text(None, "t", RUN, env_url="").splitlines()
     assert len(lines) == 4
     assert lines[0] == f"{tn.UNKNOWN_GLYPH} unknown"
 
@@ -240,16 +334,70 @@ def test_url_line_is_escaped_for_html_parse_mode():
         "html_url": "https://github.com/example-org/example-repo/actions/runs/1?a=1&b=2",
         "run_number": 5,
     }
-    lines = _text("success", run=run, prod_url="").splitlines()
+    lines = _text("success", run=run, env_url="").splitlines()
     assert "a=1&amp;b=2" in lines[3]
+    assert lines[3].startswith("DEV: ")
     href = '<a href="https://github.com/example-org/example-repo/actions/runs/1?a=1&amp;b=2">'
     assert href in lines[1]
 
 
-def test_preview_redacts_the_prod_url():
-    assert tn.redact(NEUTRAL_PROD_URL, NEUTRAL_PROD_URL) == tn.REDACTED
-    assert tn.redact("keep this", NEUTRAL_PROD_URL) == "keep this"
+def test_preview_redacts_the_environment_urls():
+    assert tn.redact(NEUTRAL_DEV_URL, NEUTRAL_DEV_URL) == tn.REDACTED
+    assert tn.redact("keep this", NEUTRAL_DEV_URL) == "keep this"
     assert tn.redact("x", "") == "x"
+    # both secret values are masked in one pass
+    both = f"DEV: {NEUTRAL_DEV_URL} / PROD: {NEUTRAL_PROD_URL}"
+    masked = tn.redact(both, NEUTRAL_DEV_URL, NEUTRAL_PROD_URL)
+    assert NEUTRAL_DEV_URL not in masked
+    assert NEUTRAL_PROD_URL not in masked
+    assert masked.count(tn.REDACTED) == 2
+
+
+# --------------------------------------------------- log masking guarantee
+
+
+def test_printed_output_masks_env_url_while_payload_carries_it(monkeypatch, capsys):
+    """The whole security contract of the environment URL, in one test.
+
+    The dev address is a private LAN value: it may exist only in the repo
+    secret and in the Telegram message text sent to the private chat. Run
+    ``main()`` with a fake ``send`` that captures the outgoing payload and
+    assert (a) the payload text CARRIES ``DEV: <env URL>`` and (b) stdout --
+    what CI logs show -- does NOT contain the address, only the mask.
+    """
+    env_url = NEUTRAL_DEV_URL
+    sent: list[dict] = []
+
+    def fake_send(payload: dict, token: str) -> dict:
+        sent.append(payload)
+        return {"result": {"message_id": 42}}
+
+    monkeypatch.setattr(tn, "send", fake_send)
+    for name in ("GITHUB_TOKEN", "DRY_RUN", "TELEGRAM_PROD_URL", "DISPATCH_CONTEXT", "TITLE"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "000000:fake-token-for-tests")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "-1001234567890")
+    monkeypatch.setenv("TELEGRAM_THREAD_ID", "111")
+    monkeypatch.setenv("TELEGRAM_DEV_URL", env_url)
+    monkeypatch.setenv("BUILD_REF", "refs/heads/main")
+    monkeypatch.setenv("RUN_ID", "1234567890")
+    monkeypatch.setenv("RUN_URL", NEUTRAL_RUN_URL)
+    monkeypatch.setenv("RUN_NUMBER", "100")
+    monkeypatch.setenv("DISPATCH_CONCLUSION", "success")
+    monkeypatch.setenv("TITLE", "masking smoke test (#101)")
+
+    assert tn.main([]) == 0
+    out = capsys.readouterr().out
+
+    # (a) the Telegram payload carries the labelled environment URL
+    assert len(sent) == 1
+    payload_text = sent[0]["text"]
+    assert f"DEV: {env_url}" in payload_text
+
+    # (b) nothing printed to stdout / CI logs shows the address
+    assert env_url not in out
+    assert tn.REDACTED in out
+    assert f"DEV: {tn.REDACTED}" in out
 
 
 # ----------------------------------------------------------- commit metadata
