@@ -2,18 +2,26 @@
 
 Reads the conclusion of a finished workflow run and posts one HTML-formatted
 message to the owner's Telegram group/topic. Every completed run notifies --
-including ``skipped`` and ``neutral`` -- with a status emoji plus a
-human-readable Russian phrase (see ``STATUS_MAP``).
+including ``skipped`` and ``neutral`` -- with a status icon plus the ORIGINAL
+GitHub conclusion text (see ``STATUS_MAP``).
 
-Message shape (3 lines, an optional 4th context line):
+Message shape (owner-corrected format, supersedes the earlier one):
 
-    <emoji> <original GitHub conclusion text>   e.g.  "✅ success"
-    <title as link to the run> (<run_id>/<run_attempt>)
-    URL: <run link>
-    [<context>]
+    <icon> <original GitHub conclusion>            e.g.  "✅ success"
+    <title> (<run URL>) (#ticket)
+    <empty line>
+    URL: <PROD_URL from secrets.TELEGRAM_PROD_URL, else the run URL>
+    [<optional context line>]
 
-The bot token comes from the ``TELEGRAM_BOT_TOKEN`` repository secret. It is
-never printed, logged, committed or included in any payload body.
+Line 2 rules: the title goes VERBATIM exactly as GitHub provides it (commit
+subject or the ``title`` input -- no prefix stripping, no rewriting); the run
+number is NOT shown (it lives inside the URL); "(#ticket)" is appended from
+the Fixes/Refs ref in the commit body, else the first "(#N)" in the subject,
+else nothing.
+
+Secrets: ``TELEGRAM_BOT_TOKEN`` (auth) and ``TELEGRAM_PROD_URL`` (line 4) are
+repository secrets -- never printed, logged, committed or put in the repo.
+Printed output (dry-run payload, message preview) always masks the PROD URL.
 """
 
 from __future__ import annotations
@@ -22,6 +30,7 @@ import argparse
 import html
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -32,6 +41,13 @@ GITHUB_API = "https://api.github.com"
 # Trailer honoured in the head commit message for an extra context line, e.g.
 #   CI-Context: PROD : https://example.com
 CONTEXT_TRAILER = "ci-context"
+
+# Ticket from the commit body: "Fixes #123" / "Refs: #123".
+BODY_REF_RE = re.compile(r"(?i)\b(?:fixes|refs)\s*:?\s*#([0-9]+)")
+# Fallback: first "(#N)" in the subject.
+SUBJECT_TICKET_RE = re.compile(r"\(#([0-9]+)\)")
+
+REDACTED = "<PROD_URL masked: real infra identifiers never appear in logs>"
 
 # Conclusion -> text glyph, mirroring GitHub's own status octicons (Telegram
 # cannot render SVG icons, so the closest Unicode equivalent of each octicon is
@@ -71,11 +87,22 @@ def escape_html(text: str) -> str:
 
 
 def first_line(text: str | None) -> str:
-    """First non-empty line of a commit subject (the run title)."""
+    """First non-empty line of a commit message (the run title)."""
     for line in (text or "").splitlines():
         stripped = line.strip()
         if stripped:
             return stripped
+    return ""
+
+
+def extract_ticket(message: str | None) -> str:
+    """``"#101"`` from the commit body (Fixes/Refs), subject "(#N)", or ''."""
+    body_match = BODY_REF_RE.search(message or "")
+    if body_match:
+        return f"#{body_match.group(1)}"
+    subject_match = SUBJECT_TICKET_RE.search(first_line(message))
+    if subject_match:
+        return f"#{subject_match.group(1)}"
     return ""
 
 
@@ -88,29 +115,35 @@ def context_from_commit(message: str | None) -> str:
     return ""
 
 
-def run_ref(run_id: str | int | None, attempt: str | int | None = 1) -> str:
-    """``run_id/run_attempt`` identifier shown in parentheses on line 2."""
-    ident = str(run_id or "").strip() or "0"
-    try:
-        attempt_n = int(attempt or 1)
-    except (TypeError, ValueError):
-        attempt_n = 1
-    return ident if attempt_n <= 1 else f"{ident}/{attempt_n}"
+def redact(text: str, secret_value: str) -> str:
+    """Mask the internal PROD URL in anything that gets printed or logged."""
+    value = (secret_value or "").strip()
+    if not value:
+        return text
+    return text.replace(value, REDACTED)
 
 
 def build_text(
     conclusion: str | None,
     title: str,
     run_url: str,
-    ref: str,
+    ticket: str = "",
+    prod_url: str = "",
     context: str = "",
 ) -> str:
-    """Compose the 3 (+optional 4) line HTML message."""
+    """Compose the 4 (+optional 5) line HTML message of the corrected format.
+
+    ``title`` is used VERBATIM (commit subject or the ``title`` input) --
+    no prefix stripping, no rewriting (owner correction to #101).
+    """
     link = f'<a href="{escape_html(run_url)}">{escape_html(title)}</a>'
+    line2 = link + (f" ({escape_html(ticket)})" if ticket.strip() else "")
+    target = (prod_url or "").strip() or run_url
     lines = [
         status_line(conclusion),
-        f"{link} ({escape_html(ref)})",
-        f"URL: {escape_html(run_url)}",
+        line2,
+        "",
+        f"URL: {escape_html(target)}",
     ]
     if context:
         lines.append(escape_html(context))
@@ -185,6 +218,7 @@ def main(argv: list[str] | None = None) -> int:
     token = env.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = env.get("TELEGRAM_CHAT_ID", "").strip()
     thread_id = env.get("TELEGRAM_THREAD_ID", "").strip()
+    prod_url = env.get("TELEGRAM_PROD_URL", "").strip()
     repo = env.get("GITHUB_REPOSITORY", "").strip()
     github_token = env.get("GITHUB_TOKEN", "").strip()
     run_id = env.get("RUN_ID", "").strip()
@@ -205,8 +239,8 @@ def main(argv: list[str] | None = None) -> int:
         or "neutral"
     )
     title = (
-        first_line(commit_message)
-        or env.get("TITLE", "").strip()
+        env.get("TITLE", "").strip()
+        or first_line(commit_message)
         or run.get("display_title")
         or env.get("DISPLAY_TITLE", "").strip()
         or run.get("name")
@@ -217,8 +251,7 @@ def main(argv: list[str] | None = None) -> int:
         or env.get("RUN_URL", "").strip()
         or (f"https://github.com/{repo}/actions/runs/{run_id}" if repo and run_id else "")
     )
-    attempt = run.get("run_attempt") or env.get("RUN_ATTEMPT", "") or 1
-    ident = str(run.get("id") or run_id or env.get("RUN_NUMBER", "") or "0")
+    ticket = extract_ticket(commit_message)
     context = resolve_context(env.get("DISPATCH_CONTEXT", ""), commit_message)
 
     if not chat_id:
@@ -229,11 +262,16 @@ def main(argv: list[str] | None = None) -> int:
             "(gh secret set TELEGRAM_BOT_TOKEN)"
         )
 
-    text = build_text(conclusion, title, run_url, run_ref(ident, attempt), context)
+    text = build_text(conclusion, title, run_url, ticket=ticket, prod_url=prod_url, context=context)
     payload = build_payload(chat_id, thread_id, text)
 
+    # Logs are public in this repo: always mask the internal PROD URL.
+    print("message preview (PROD URL masked):")
+    print(redact(text, prod_url))
+
     if dry_run:
-        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        safe_payload = dict(payload, text=redact(payload["text"], prod_url))
+        print(json.dumps(safe_payload, ensure_ascii=False, indent=2))
         print("dry-run: payload printed, nothing sent")
         return 0
 
