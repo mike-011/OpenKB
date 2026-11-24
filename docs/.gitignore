@@ -15,3 +15,4 @@
 !local-llm/**/*.md
 !local-llm/**/*.json
 !i18n-review-checklist.md
+!telegram-ci-notifications.md
