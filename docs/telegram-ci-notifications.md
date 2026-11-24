@@ -15,19 +15,19 @@ behaviour is pinned down by `tests/test_telegram_notify.py`.
 <icon> <original GitHub conclusion>
 <title verbatim> (<run URL>) (#<run number>)
 <empty line>
-URL: <PROD_URL from secrets.TELEGRAM_PROD_URL, else the run URL>
+<DEV|PROD>: <environment URL from secrets, else the run URL>
 [<optional context line>]
 ```
 
-Real shape (example values, `example-org/example-repo` and `prod.example.com`
-are NOT this repo — the real PROD address is a secret and never appears in
-files, logs or comments):
+Real shape (example values, `example-org/example-repo`, `prod.example.com`
+and `192.168.0.77` are NOT this repo — the real dev address is a secret and
+never appears in files, logs or comments):
 
 ```text
 ✅ success
 ci: Telegram notifications for every CI run (#101) (https://github.com/example-org/example-repo/actions/runs/1234567890) (#100)
 
-URL: https://prod.example.com
+DEV: http://192.168.0.77:7566
 PROD : https://example.com
 ```
 
@@ -53,10 +53,21 @@ both come from the same run payload.)
     ("link goes to run #100 but the message shows #101") — fixed by the
     same-source rule above.
 - Line 3: **empty**.
-- Line 4: literal `URL: ` + `<PROD_URL>` from the repository secret
-  `TELEGRAM_PROD_URL`; if that secret is empty, the run URL is used instead.
-  The value is never read into the repo, never printed — logs and dry-run
-  output mask it as `<PROD_URL masked …>`.
+- Line 4: **environment label** + `: ` + the address — the literal `URL`
+  label from earlier rounds is gone. Two labels exist:
+  - `DEV: <secrets.TELEGRAM_DEV_URL>` — every build (dev builds are the only
+    kind that exist today); if that secret is empty, the run URL is used
+    instead;
+  - `PROD: <secrets.TELEGRAM_PROD_URL>` — release builds **only**, and only
+    when BOTH conditions hold: the build ref is a version tag
+    (`refs/tags/v…` / bare `v…`) **and** the prod URL secret exists. The prod
+    secret was deliberately deleted (there is no v0.6.0 release yet), so the
+    PROD branch is currently impossible to trigger — every run prints `DEV`.
+    Gate lives in `resolve_environment()` / `is_release_ref()`.
+  The addresses are private: never read into the repo, never printed —
+  logs and dry-run output mask them as `<ENV URL masked …>`
+  (`test_printed_output_masks_env_url_while_payload_carries_it` asserts that
+  the printed output masks the address while the Telegram payload carries it).
 - Optional line 5: an extra context string (deployment URL etc.), appended
   after the URL line. Sources, first match wins:
   1. `context` input on `workflow_dispatch`;
@@ -105,10 +116,21 @@ otherwise each notification would trigger the next one forever.
 - Bot: `@sysadminodua_bot`. Token is **only** in the repository secret
   `TELEGRAM_BOT_TOKEN` (`gh secret set TELEGRAM_BOT_TOKEN`); it is never
   committed, logged, echoed or placed in the payload body.
-- Line-4 target: repository secret `TELEGRAM_PROD_URL` (internal address —
-  data-hygiene rule: never written to any repo file, log or issue comment; the
-  workflow only references `secrets.TELEGRAM_PROD_URL`, and the script masks
-  the value in everything it prints). Empty secret ⇒ run URL fallback.
+- Line-4 target: repository secrets `TELEGRAM_DEV_URL` (dev address, set) and
+  `TELEGRAM_PROD_URL` (release address — **not set**, deliberately deleted
+  until a release exists). The workflow references only `secrets.<NAME>`;
+  empty dev secret ⇒ run URL fallback, empty prod secret ⇒ PROD unreachable.
+- Where the environment address may live — each surface, explicitly:
+  1. **Repository secret value** — write-only via the API; the only stored
+     copy.
+  2. **Telegram message text** — sent to the private group/topic only.
+  3. Nowhere else: **not** in repo files, **not** in issue/PR bodies or
+     comments, **not** in commit messages, **not** in CI logs. Logs are
+     public, so every printed byte (preview, dry-run JSON, warnings) passes
+     through `redact()`, which masks the dev and prod values as
+     `<ENV URL masked …>`; the unit test
+     `test_printed_output_masks_env_url_while_payload_carries_it` pins the
+     split (payload carries it, stdout masks it).
 - Target `chat_id` / `message_thread_id` are set in the workflow's `env` block
   (values taken from the owner's topic link; example placeholders elsewhere in
   this doc: `-1001234567890`, thread `111`).
@@ -122,10 +144,15 @@ otherwise each notification would trigger the next one forever.
 gh workflow run "Telegram notify" --ref main \
   -f fake_conclusion=success -f title="Telegram notify smoke test (#101)"
 
-# failure path / payload only, no Telegram traffic (PROD URL masked in log)
+# failure path / payload only, no Telegram traffic (env URL masked in log)
 gh workflow run "Telegram notify" --ref main \
   -f fake_conclusion=timed_out -f dry_run=true
 
-# unit-style: every conclusion builds a message without crashing
+# unit-style: label gates, masking guarantee, every conclusion builds a
+# message without crashing
 uv run --no-sync pytest tests/test_telegram_notify.py
 ```
+
+Log check for the masking guarantee: in any run's log the preview line must
+show `DEV: <ENV URL masked …>` — the address itself never appears in the log
+text, while the delivered Telegram message shows `DEV: <address>`.
