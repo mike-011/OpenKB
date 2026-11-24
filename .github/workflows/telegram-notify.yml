@@ -74,9 +74,12 @@ jobs:
           TELEGRAM_THREAD_ID: "2681"
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          # url + number MUST come from the same run payload (line-2 rule):
+          # workflow_run fields for trigger runs, this dispatch run's own
+          # id/number for workflow_dispatch tests. Never mix the two.
           RUN_ID: ${{ github.event.workflow_run.id || github.run_id }}
-          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
           RUN_URL: ${{ github.event.workflow_run.html_url }}
+          RUN_NUMBER: ${{ github.event.workflow_run.run_number || github.run_number }}
           CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           DISPLAY_TITLE: ${{ github.event.workflow_run.display_title }}
           HEAD_MESSAGE: ${{ github.event.workflow_run.head_commit.message }}
