@@ -111,8 +111,8 @@ export default function AppSidebar() {
             className="w-full flex items-center gap-2.5 px-3 h-9 rounded-apple-sm text-[13.5px] text-muted-foreground hover:bg-accent/60 hover:text-foreground transition-colors duration-fast ease-out-apple active:scale-[0.98]"
           >
             <span className={cn("w-2 h-2 rounded-full shrink-0", dotFor(i))} />
-            <span className="truncate">{kb.name}</span>
-            <span className="ml-auto text-[11px] text-muted-foreground font-mono2 tabular-nums">
+            <span className="truncate min-w-0" title={kb.name}>{kb.name}</span>
+            <span className="ml-auto text-[11px] text-muted-foreground font-mono2 tabular-nums shrink-0">
               {kb.document_count}
             </span>
           </button>

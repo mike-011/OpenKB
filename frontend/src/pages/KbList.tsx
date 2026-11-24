@@ -50,9 +50,9 @@ export default function KbList() {
               onClick={() => navigate(`/kb/${encodeURIComponent(kb.name)}`)}
               className={cn('anim-fade-up text-left rounded-2xl border border-[hsl(var(--glass-border))] glass-2 p-5 hover:shadow-glass hover:-translate-y-0.5 transition-[transform,box-shadow] duration-fast ease-out-apple active:scale-[0.98]', `anim-d${(i % 4) + 1}`)}
             >
-              <div className="flex items-center gap-2.5">
-                <span className={cn('w-2.5 h-2.5 rounded-full', dotFor(i))} />
-                <span className="text-[16px] font-bold text-foreground">{kb.name}</span>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className={cn('w-2.5 h-2.5 rounded-full shrink-0', dotFor(i))} />
+                <span className="text-[16px] font-bold text-foreground truncate" title={kb.name}>{kb.name}</span>
               </div>
 
               {/* Directory in small muted mono so scattered (custom-path) KBs
@@ -77,7 +77,7 @@ export default function KbList() {
                 <span className={cn('font-mono2 rounded px-1.5 py-0.5', kb.has_raw ? 'bg-muted' : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400')}>
                   {kb.has_raw ? t('rawReady') : t('rawMissing')}
                 </span>
-                <span>{formatCompile(kb.last_compile)}</span>
+                <span className="whitespace-nowrap tabular-nums shrink-0">{formatCompile(kb.last_compile)}</span>
               </div>
             </button>
           ))}
