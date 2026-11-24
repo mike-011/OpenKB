@@ -335,7 +335,7 @@ def test_context_line_follows_the_env_line_with_a_pr_block():
     assert lines[6] == "PROD : https://example.com"
 
 
-# --------------------------------------------------- environment label (line 4)
+# -------------------------------------------------- environment label (env line)
 
 
 def test_url_line_carries_dev_label_with_dev_url():
