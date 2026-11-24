@@ -5,15 +5,22 @@ message to the owner's Telegram group/topic. Every completed run notifies --
 including ``skipped`` and ``neutral`` -- with a status icon plus the ORIGINAL
 GitHub conclusion text (see ``STATUS_MAP``).
 
-Message shape (owner-corrected format, supersedes the earlier one):
+Message shape (owner-final format, fourth round = PR-suffix strip + PR block):
 
     <icon> <original GitHub conclusion>            e.g.  "✅ success"
-    <title verbatim> (<run URL>) (#<run number>)
+    <title minus trailing GitHub PR-suffix tokens> (<run URL>) (#<run number>)
+    <empty line>
+    PR #<n1>
+    PR #<n2>
     <empty line>
     <DEV|PROD>: <environment URL, else the run URL>
     [<optional context line>]
 
-Line 4 = the environment label, a colon and the address (the old literal
+When NO pull request is associated with the run's commits, the PR block and
+its separating empty line are BOTH omitted -- the message keeps the earlier
+shape: title line, empty line, env line (then the optional context line).
+
+Env line = the environment label, a colon and the address (the old literal
 ``URL`` label is gone). Two labels exist: ``DEV`` for dev builds and ``PROD``
 for release builds (``PROD: http://ip.ad.dr.es:7566`` shape). ``PROD`` is
 double-gated by ``resolve_environment`` -- BOTH a release build (version tag
@@ -23,15 +30,27 @@ it yet: every build reports ``DEV`` with ``secrets.TELEGRAM_DEV_URL``, and an
 empty dev secret falls back to the run URL.
 
 Line 2 rules: the title goes VERBATIM exactly as GitHub provides it (commit
-subject or the ``title`` input -- no prefix stripping, no rewriting); the
-trailing token is "(#<run number>)" in GitHub's own style, and that number
-must be the run number OF THE VERY RUN the URL points to -- ``html_url`` and
-``run_number`` are always read from one payload (``run_source_from_env`` /
-the fetched run object), never mixed across runs. Unknown number -> token
-omitted rather than guessed.
+subject or the ``title`` input) with ONE named exception -- GitHub's
+squash-merge suffix, a trailing " (#<digits>)" token at the END of the title
+is removed repeatedly until none remain (``strip_pr_suffix``): no other
+prefix or substring is ever touched, and never by a fixed character count.
+The trailing token of line 2 itself is " (#<run number>)" in GitHub's own
+style, and that number must be the run number OF THE VERY RUN the URL points
+to -- ``html_url`` and ``run_number`` are always read from one payload
+(``run_source_from_env`` / the fetched run object), never mixed across runs.
+Unknown number -> token omitted rather than guessed.
 
-Secrets: ``TELEGRAM_BOT_TOKEN`` (auth), ``TELEGRAM_DEV_URL`` (line 4, dev
-address) and ``TELEGRAM_PROD_URL`` (line 4, release address -- name kept for
+PR block rules: one ``PR #N`` line (hash, decimal, no link, no punctuation)
+per pull request associated with the run's commits -- GitHub API
+``GET /repos/{repo}/commits/{sha}/pulls`` (``Accept: application/vnd.github+json``)
+for each commit of the run: the payload's ``commits`` when present, else the
+run's ``head_sha`` commit (``collect_commit_shas``). Numbers are deduped and
+sorted ascending (``fetch_pr_numbers``), and a failed lookup degrades to no
+block rather than crashing a notification. The block always ends with a
+second empty line before the env line.
+
+Secrets: ``TELEGRAM_BOT_TOKEN`` (auth), ``TELEGRAM_DEV_URL`` (env line, dev
+address) and ``TELEGRAM_PROD_URL`` (env line, release address -- name kept for
 the gate, no such secret exists yet) are repository secrets -- never printed,
 logged, committed or put in the repo. The environment URL is a private LAN
 address: it may exist ONLY in the secret value and in the Telegram message
@@ -51,7 +70,7 @@ import re
 import sys
 import urllib.error
 import urllib.request
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 
 TELEGRAM_API = "https://api.telegram.org"
 GITHUB_API = "https://api.github.com"
@@ -60,9 +79,18 @@ GITHUB_API = "https://api.github.com"
 #   CI-Context: PROD : https://example.com
 CONTEXT_TRAILER = "ci-context"
 
+# GitHub's squash-merge suffix: a trailing " (#<digits>)" token at the END of
+# the title (round 4) -- a NAMED pattern, removed repeatedly until none
+# remain. Nothing else is stripped: no other prefix/substring, never a fixed
+# character count.
+PR_SUFFIX_RE = re.compile(r" \(#\d+\)$")
+
+# Media type for the PR-association lookup /repos/{repo}/commits/{sha}/pulls.
+PULLS_ACCEPT = "application/vnd.github+json"
+
 REDACTED = "<ENV URL masked: real infra identifiers never appear in logs>"
 
-# Line-4 environment labels. DEV = every build; PROD = release builds only,
+# Env-line environment labels. DEV = every build; PROD = release builds only,
 # and only when a prod URL secret exists (see resolve_environment).
 DEV_LABEL = "DEV"
 PROD_LABEL = "PROD"
@@ -118,6 +146,23 @@ def first_line(text: str | None) -> str:
     return ""
 
 
+def strip_pr_suffix(title: str | None) -> str:
+    """Drop GitHub's trailing squash-merge PR-suffix tokens from ``title``.
+
+    ``"fix(test): something (#107)"`` -> ``"fix(test): something"``; the strip
+    repeats until no trailing ``" (#<digits>)"`` token remains
+    (``"foo (#107) (#108)"`` -> ``"foo"``). Everything else -- prefixes,
+    interior tokens, non-digit tokens, length -- is untouched: this is a
+    named pattern, never a fixed character count (round-4 owner rule).
+    """
+    text = title or ""
+    while True:
+        stripped = PR_SUFFIX_RE.sub("", text)
+        if stripped == text:
+            return stripped
+        text = stripped
+
+
 def context_from_commit(message: str | None) -> str:
     """Value of the ``CI-Context:`` trailer in a commit message, or ''."""
     for line in (message or "").splitlines():
@@ -138,7 +183,7 @@ def resolve_environment(
     prod_url: str,
     run_url: str = "",
 ) -> tuple[str, str]:
-    """Line-4 ``(label, address)`` for this build.
+    """Env-line ``(label, address)`` for this build.
 
     ``PROD`` requires BOTH conditions at once: a release build (version tag
     ref) AND a non-empty prod URL secret. No prod secret exists yet (the old
@@ -188,20 +233,28 @@ def build_text(
     env_label: str = "",
     env_url: str = "",
     context: str = "",
+    prs: Sequence[int] | None = None,
 ) -> str:
-    """Compose the 4 (+optional 5) line HTML message of the corrected format.
+    """Compose the owner-final HTML message (round 4).
 
-    ``title`` is used VERBATIM (commit subject or the ``title`` input) --
-    no prefix stripping, no rewriting (owner correction to #101).
+    ``title`` is used VERBATIM (commit subject or the ``title`` input) with
+    ONE named exception -- ``strip_pr_suffix`` removes GitHub's trailing
+    squash-merge suffix, ``" (#<digits>)"`` tokens at the END, until none
+    remain; nothing else about it changes (owner correction to #101).
 
-    Line 2 = ``<title verbatim> (<run URL>) (#<run number>)``: both fields
-    are read from the SAME ``run`` mapping (see ``run_source_from_env``) so a
-    URL of one run can never be paired with the number of another. GitHub's
-    run URL carries the run *id*, the token carries the run *number*. If the
-    number is unknown the token is omitted -- a wrong number is worse than
-    none.
+    Line 2 = ``<title minus the suffix> (<run URL>) (#<run number>)``: both
+    run fields are read from the SAME ``run`` mapping (see
+    ``run_source_from_env``) so a URL of one run can never be paired with the
+    number of another. GitHub's run URL carries the run *id*, the token
+    carries the run *number*. If the number is unknown the token is omitted --
+    a wrong number is worse than none.
 
-    Line 4 = ``<DEV|PROD>: <address>`` -- the label comes from
+    PR block = one ``PR #N`` line per entry of ``prs`` (deduped, ascending),
+    preceded by the format's empty line and followed by a SECOND empty line.
+    When ``prs`` is empty the whole block -- including that separating empty
+    line -- vanishes, so line 2 is followed directly by the env line.
+
+    Env line = ``<DEV|PROD>: <address>`` -- the label comes from
     ``resolve_environment`` (never the old literal ``URL``; a missing label
     still defaults to ``DEV``), the address from ``env_url`` with the run URL
     as fallback when the secret is empty.
@@ -209,16 +262,18 @@ def build_text(
     run = run or {}
     run_url = str(run.get("html_url") or "")
     number = str(run.get("run_number") or "").strip()
-    link = f'<a href="{escape_html(run_url)}">{escape_html(title)}</a>'
+    link = f'<a href="{escape_html(run_url)}">{escape_html(strip_pr_suffix(title))}</a>'
     line2 = link + (f" (#{escape_html(number)})" if number.isdigit() else "")
     label = (env_label or "").strip() or DEV_LABEL
     target = (env_url or "").strip() or run_url
-    lines = [
-        status_line(conclusion),
-        line2,
-        "",
-        f"{label}: {escape_html(target)}",
-    ]
+    lines = [status_line(conclusion), line2, ""]
+    # PR block (round 4): normalized here too (deduped, ascending) so the
+    # printed order never depends on the API's response order.
+    block = sorted({int(pr) for pr in prs or ()})
+    if block:
+        lines.extend(f"PR #{pr}" for pr in block)
+        lines.append("")
+    lines.append(f"{label}: {escape_html(target)}")
     if context:
         lines.append(escape_html(context))
     return "\n".join(lines)
@@ -277,6 +332,80 @@ def fetch_run(repo: str, run_id: str, token: str) -> dict:
         return {}
 
 
+def collect_commit_shas(run: Mapping, env: Mapping[str, str]) -> list[str]:
+    """Commits whose pull requests the PR block must list (deduped, in order).
+
+    The run payload's ``commits`` when present (workflow_run), else the run's
+    ``head_sha`` commit -- falling back to the ``HEAD_SHA`` env the workflow
+    passes for the trigger run's head commit (round-4 rule).
+    """
+    shas: list[str] = []
+    commits = run.get("commits")
+    if isinstance(commits, list):
+        for commit in commits:
+            sha = ""
+            if isinstance(commit, dict):
+                sha = str(commit.get("sha") or "").strip()
+            if sha:
+                shas.append(sha)
+    if not shas:
+        sha = str(run.get("head_sha") or env.get("HEAD_SHA") or "").strip()
+        if sha:
+            shas.append(sha)
+    ordered: list[str] = []
+    seen: set[str] = set()
+    for sha in shas:
+        if sha not in seen:
+            seen.add(sha)
+            ordered.append(sha)
+    return ordered
+
+
+def github_json(path: str, token: str) -> object:
+    """GET a GitHub API path; return the parsed JSON or ``[]`` on any failure.
+
+    A failed lookup must never crash or suppress a notification: warn with the
+    error KIND only (auth travels in the header, never the URL) and let the
+    caller degrade.
+    """
+    request = urllib.request.Request(
+        f"{GITHUB_API}{path}",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": PULLS_ACCEPT,
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except (urllib.error.HTTPError, urllib.error.URLError, ValueError) as exc:
+        print(f"::warning::GitHub lookup failed ({exc.__class__.__name__}); continuing without it")
+        return []
+
+
+def fetch_pr_numbers(repo: str, shas: Sequence[str], token: str) -> list[int]:
+    """PR numbers linked to ``shas`` via ``GET /repos/{repo}/commits/{sha}/pulls``.
+
+    One lookup per commit of the run, deduped by number, sorted ascending --
+    exactly the order the PR block prints (round-4 rule).
+    """
+    numbers: set[int] = set()
+    for sha in shas:
+        data = github_json(f"/repos/{repo}/commits/{sha}/pulls", token)
+        if not isinstance(data, list):
+            continue
+        for pull in data:
+            if not isinstance(pull, dict):
+                continue
+            number = pull.get("number")
+            if isinstance(number, int):
+                numbers.add(number)
+            elif isinstance(number, str) and number.isdigit():
+                numbers.add(int(number))
+    return sorted(numbers)
+
+
 def resolve_context(explicit: str, commit_message: str) -> str:
     """Dispatch input wins, then the CI-Context commit trailer."""
     explicit = (explicit or "").strip()
@@ -333,6 +462,17 @@ def main(argv: list[str] | None = None) -> int:
     if not str(run.get("run_number") or "").strip():
         print("::warning::run_number unavailable; line 2 will omit the (#N) token")
 
+    # PR block (round 4): pull requests of the run's commits -- the payload's
+    # commits when present, else head_sha -- via commits/{sha}/pulls. Without
+    # a token there is no authenticated lookup: skip it and simply send no PR
+    # block (never guess numbers).
+    shas = collect_commit_shas(run, env)
+    pr_numbers: list[int] = []
+    if shas and repo and github_token:
+        pr_numbers = fetch_pr_numbers(repo, shas, github_token)
+    elif shas:
+        print("::notice::no GITHUB_TOKEN; PR block omitted")
+
     if not chat_id:
         raise SystemExit("TELEGRAM_CHAT_ID is not set")
     if not token and not dry_run:
@@ -341,11 +481,17 @@ def main(argv: list[str] | None = None) -> int:
             "(gh secret set TELEGRAM_BOT_TOKEN)"
         )
 
-    # Label + address for line 4, from ONE decision point (double gate).
+    # Label + address for the env line, from ONE decision point (double gate).
     run_url = str(run.get("html_url") or "")
     env_label, env_address = resolve_environment(build_ref, dev_url, prod_url, run_url)
     text = build_text(
-        conclusion, title, run, env_label=env_label, env_url=env_address, context=context
+        conclusion,
+        title,
+        run,
+        env_label=env_label,
+        env_url=env_address,
+        context=context,
+        prs=pr_numbers,
     )
     payload = build_payload(chat_id, thread_id, text)
 
